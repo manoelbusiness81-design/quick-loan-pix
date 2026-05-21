@@ -4,15 +4,17 @@ import { CheckCircle2 } from "lucide-react";
 
 export interface SimulationData {
   cliente: string;
-  prazoInicial: number;
-  prazoAtual: number;
+  // Contrato atual
   parcela: number;
-  taxa: number;
+  prazoRestante: number;
+  taxaAtual: number;
   saldoDevedor: number;
+  // Nova operação
+  taxaNova: number;
+  prazoNovo: number;
+  novoValorFinanciado: number;
   troco: number;
   banco?: string;
-  novoPrazo?: number;
-  novaParcela?: number;
 }
 
 export const SimulationCard = forwardRef<HTMLDivElement, { data: SimulationData }>(({ data }, ref) => {
@@ -26,7 +28,7 @@ export const SimulationCard = forwardRef<HTMLDivElement, { data: SimulationData 
       <div className="bg-gradient-navy px-10 pb-8 pt-10 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">Simulação de Consignado</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">Simulação de Refinanciamento</div>
             <div className="mt-1 font-display text-2xl font-bold leading-tight">
               {data.cliente || "Cliente"}
             </div>
@@ -39,7 +41,7 @@ export const SimulationCard = forwardRef<HTMLDivElement, { data: SimulationData 
         {/* Hero troco */}
         <div className="mt-7 rounded-2xl bg-gradient-brand p-6 shadow-brand">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-foreground/80">
-            Valor Liberado
+            Troco Liberado
           </div>
           <div
             className="mt-1 font-display font-extrabold leading-none text-brand-foreground tabular-nums"
@@ -48,7 +50,7 @@ export const SimulationCard = forwardRef<HTMLDivElement, { data: SimulationData 
             {brl(data.troco)}
           </div>
           <div className="mt-2 text-sm font-medium text-brand-foreground/85">
-            Aprovado para crédito imediato
+            Sua parcela continua em {brl(data.parcela)}
           </div>
         </div>
       </div>
@@ -61,14 +63,19 @@ export const SimulationCard = forwardRef<HTMLDivElement, { data: SimulationData 
           </div>
         )}
 
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Nova operação</div>
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Parcela" value={brl(data.parcela)} highlight />
-          <Stat label="Prazo" value={`${data.prazoAtual} meses`} highlight />
-          <Stat label="Taxa de Juros" value={pct(data.taxa)} />
+          <Stat label="Novo Prazo" value={`${data.prazoNovo} meses`} highlight />
+          <Stat label="Nova Taxa" value={pct(data.taxaNova)} />
+          <Stat label="Valor Financiado" value={brl(data.novoValorFinanciado)} />
+        </div>
+
+        <div className="mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Contrato atual quitado</div>
+        <div className="grid grid-cols-3 gap-3">
           <Stat label="Saldo Devedor" value={brl(data.saldoDevedor)} />
-          {data.novoPrazo != null && <Stat label="Novo Prazo" value={`${data.novoPrazo} meses`} />}
-          {data.novaParcela != null && <Stat label="Nova Parcela" value={brl(data.novaParcela)} />}
-          <Stat label="Prazo Inicial" value={`${data.prazoInicial} meses`} />
+          <Stat label="Taxa Atual" value={pct(data.taxaAtual)} />
+          <Stat label="Prazo Restante" value={`${data.prazoRestante}m`} />
         </div>
 
         <div className="mt-7 border-t border-border pt-5 text-center">
