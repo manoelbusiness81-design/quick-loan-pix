@@ -2,18 +2,24 @@ import { forwardRef } from "react";
 import { brl, pct } from "@/lib/format";
 import { CheckCircle2 } from "lucide-react";
 
-export interface SimulationData {
-  cliente: string;
-  // Contrato atual
+export interface ParcelaResumo {
   parcela: number;
   prazoRestante: number;
   taxaAtual: number;
   saldoDevedor: number;
-  // Nova operação
-  taxaNova: number;
-  prazoNovo: number;
   novoValorFinanciado: number;
   troco: number;
+}
+
+export interface SimulationData {
+  cliente: string;
+  parcelas: ParcelaResumo[];
+  totalParcela: number;
+  totalSaldoDevedor: number;
+  totalNovoValorFinanciado: number;
+  totalTroco: number;
+  taxaNova: number;
+  prazoNovo: number;
   banco?: string;
 }
 
@@ -38,19 +44,19 @@ export const SimulationCard = forwardRef<HTMLDivElement, { data: SimulationData 
           </div>
         </div>
 
-        {/* Hero troco */}
+        {/* Hero troco total */}
         <div className="mt-7 rounded-2xl bg-gradient-brand p-6 shadow-brand">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-foreground/80">
-            Troco Liberado
+            Total Liberado
           </div>
           <div
             className="mt-1 font-display font-extrabold leading-none text-brand-foreground tabular-nums"
             style={{ fontSize: 64, letterSpacing: "-0.04em" }}
           >
-            {brl(data.troco)}
+            {brl(data.totalTroco)}
           </div>
           <div className="mt-2 text-sm font-medium text-brand-foreground/85">
-            Sua parcela continua em {brl(data.parcela)}
+            Suas parcelas continuam em {brl(data.totalParcela)} no total
           </div>
         </div>
       </div>
@@ -64,18 +70,46 @@ export const SimulationCard = forwardRef<HTMLDivElement, { data: SimulationData 
         )}
 
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Nova operação</div>
-        <div className="grid grid-cols-2 gap-3">
-          <Stat label="Parcela" value={brl(data.parcela)} highlight />
+        <div className="grid grid-cols-3 gap-3">
+          <Stat label="Parcela total" value={brl(data.totalParcela)} highlight />
           <Stat label="Novo Prazo" value={`${data.prazoNovo} meses`} highlight />
-          <Stat label="Nova Taxa" value={pct(data.taxaNova)} />
-          <Stat label="Valor Financiado" value={brl(data.novoValorFinanciado)} />
+          <Stat label="Nova Taxa" value={pct(data.taxaNova)} highlight />
         </div>
 
-        <div className="mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Contrato atual quitado</div>
-        <div className="grid grid-cols-3 gap-3">
-          <Stat label="Saldo Devedor" value={brl(data.saldoDevedor)} />
-          <Stat label="Taxa Atual" value={pct(data.taxaAtual)} />
-          <Stat label="Prazo Restante" value={`${data.prazoRestante}m`} />
+        {data.parcelas.length > 1 && (
+          <>
+            <div className="mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Detalhamento por contrato ({data.parcelas.length})
+            </div>
+            <div className="overflow-hidden rounded-xl border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-secondary">
+                  <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-3 py-2">#</th>
+                    <th className="px-3 py-2">Parcela</th>
+                    <th className="px-3 py-2">Prazo</th>
+                    <th className="px-3 py-2 text-right">Troco</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {data.parcelas.map((p, i) => (
+                    <tr key={i} className="tabular-nums">
+                      <td className="px-3 py-2 font-semibold text-muted-foreground">{i + 1}</td>
+                      <td className="px-3 py-2 font-semibold text-foreground">{brl(p.parcela)}</td>
+                      <td className="px-3 py-2 text-foreground">{p.prazoRestante}m</td>
+                      <td className="px-3 py-2 text-right font-bold text-brand">{brl(p.troco)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <div className="mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Contratos quitados</div>
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Saldo Devedor Total" value={brl(data.totalSaldoDevedor)} />
+          <Stat label="Valor Financiado" value={brl(data.totalNovoValorFinanciado)} />
         </div>
 
         <div className="mt-7 border-t border-border pt-5 text-center">
@@ -96,7 +130,7 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
   return (
     <div className={`rounded-xl border border-border p-4 ${highlight ? "bg-accent" : "bg-card"}`}>
       <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-display font-bold tabular-nums text-foreground ${highlight ? "text-xl" : "text-base"}`}>
+      <div className={`mt-1 font-display font-bold tabular-nums text-foreground ${highlight ? "text-lg" : "text-base"}`}>
         {value}
       </div>
     </div>
