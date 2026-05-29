@@ -95,8 +95,15 @@ function SimulatorPage() {
     () => (coefSelecionado ? comms.find((c) => Math.abs(Number(c.taxa) - Number(coefSelecionado.taxa)) < 0.0001) : undefined),
     [comms, coefSelecionado]
   );
+  const sellerCfg = useMemo(
+    () => (coefSelecionado ? sellerComms.find((c) => Math.abs(Number(c.taxa) - Number(coefSelecionado.taxa)) < 0.0001) : undefined),
+    [sellerComms, coefSelecionado]
+  );
   const comissaoPct = commCfg ? Number(commCfg.percentual) : 0;
   const comissaoValor = (valorBruto * comissaoPct) / 100;
+  const sellerPct = sellerCfg ? Number(sellerCfg.percentual) : 0;
+  const sellerValor = (valorBruto * sellerPct) / 100;
+  const lucroEmpresa = comissaoValor - sellerValor;
 
   const data: SimulationData = {
     cliente,
