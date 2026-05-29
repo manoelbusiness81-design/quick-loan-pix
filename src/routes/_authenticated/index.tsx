@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/")({
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; }
 interface Comm { id: string; taxa: number; percentual: number; }
+interface SellerComm { id: string; user_id: string; taxa: number; percentual: number; }
 
 interface ParcelaInput { id: string; parcela: string; prazoRestante: string; taxaAtual: string; }
 
@@ -35,10 +36,11 @@ function calcSaldoDevedor(parcela: number, prazo: number, taxaPctMes: number): n
 }
 
 function SimulatorPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const cardRef = useRef<HTMLDivElement>(null);
   const [coefs, setCoefs] = useState<Coef[]>([]);
   const [comms, setComms] = useState<Comm[]>([]);
+  const [sellerComms, setSellerComms] = useState<SellerComm[]>([]);
   const [selectedCoefId, setSelectedCoefId] = useState<string>("");
 
   const [cliente, setCliente] = useState("");
@@ -53,8 +55,12 @@ function SimulatorPage() {
   useEffect(() => {
     if (!user) return;
     supabase.from("coefficients").select("*").order("taxa").then(({ data }) => setCoefs((data as Coef[]) ?? []));
-    supabase.from("commissions").select("*").order("taxa").then(({ data }) => setComms((data as Comm[]) ?? []));
-  }, [user]);
+    if (isAdmin) {
+      supabase.from("commissions").select("*").order("taxa").then(({ data }) => setComms((data as Comm[]) ?? []));
+    }
+    (supabase.from as any)("seller_commissions").select("*").eq("user_id", user.id).order("taxa")
+      .then(({ data }: any) => setSellerComms((data as SellerComm[]) ?? []));
+  }, [user, isAdmin]);
 
   const coefSelecionado = coefs.find((c) => c.id === selectedCoefId);
   const coefValor = coefSelecionado ? Number(coefSelecionado.coeficiente) : 0;
@@ -89,8 +95,15 @@ function SimulatorPage() {
     () => (coefSelecionado ? comms.find((c) => Math.abs(Number(c.taxa) - Number(coefSelecionado.taxa)) < 0.0001) : undefined),
     [comms, coefSelecionado]
   );
+  const sellerCfg = useMemo(
+    () => (coefSelecionado ? sellerComms.find((c) => Math.abs(Number(c.taxa) - Number(coefSelecionado.taxa)) < 0.0001) : undefined),
+    [sellerComms, coefSelecionado]
+  );
   const comissaoPct = commCfg ? Number(commCfg.percentual) : 0;
   const comissaoValor = (valorBruto * comissaoPct) / 100;
+  const sellerPct = sellerCfg ? Number(sellerCfg.percentual) : 0;
+  const sellerValor = (valorBruto * sellerPct) / 100;
+  const lucroEmpresa = comissaoValor - sellerValor;
 
   const data: SimulationData = {
     cliente,
@@ -315,21 +328,44 @@ function SimulatorPage() {
               </div>
             )}
 
-            {/* Comissão interna */}
-            {coefSelecionado && valorBruto > 0 && (
+            {/* Comissão da empresa — apenas admin */}
+            {isAdmin && coefSelecionado && valorBruto > 0 && (
               <div className="mt-4 rounded-xl border border-dashed border-brand/40 bg-brand/5 p-4">
                 <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-brand">
-                  <Sparkles className="h-3.5 w-3.5" /> Comissão interna · não enviada ao cliente
+                  <Sparkles className="h-3.5 w-3.5" /> Empresa · interno admin
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-muted-foreground">Valor bruto da operação</div>
+                  <div className="text-muted-foreground">Valor bruto</div>
                   <div className="text-right font-semibold tabular-nums text-foreground">{brl(valorBruto)}</div>
-                  <div className="text-muted-foreground">% comissão ({commCfg ? "configurada" : "sem cadastro"})</div>
+                  <div className="text-muted-foreground">% comissão empresa {commCfg ? "" : "(sem cadastro)"}</div>
                   <div className="text-right font-semibold tabular-nums text-foreground">{pct(comissaoPct, 3)}</div>
+                  <div className="text-muted-foreground">Comissão total empresa</div>
+                  <div className="text-right font-semibold tabular-nums text-foreground">{brl(comissaoValor)}</div>
+                  <div className="text-muted-foreground">Repasse vendedor</div>
+                  <div className="text-right font-semibold tabular-nums text-foreground">- {brl(sellerValor)}</div>
                 </div>
                 <div className="mt-3 flex items-baseline justify-between border-t border-brand/20 pt-3">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Comissão</div>
-                  <div className="font-display text-2xl font-extrabold tabular-nums text-brand">{brl(comissaoValor)}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Lucro líquido</div>
+                  <div className="font-display text-2xl font-extrabold tabular-nums text-brand">{brl(lucroEmpresa)}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Comissão do vendedor — visível para todos */}
+            {coefSelecionado && valorBruto > 0 && (
+              <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-primary">
+                  <Sparkles className="h-3.5 w-3.5" /> {isAdmin ? "Comissão do vendedor (você)" : "Minha comissão"}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-muted-foreground">Valor bruto</div>
+                  <div className="text-right font-semibold tabular-nums text-foreground">{brl(valorBruto)}</div>
+                  <div className="text-muted-foreground">% comissão {sellerCfg ? "" : "(sem cadastro)"}</div>
+                  <div className="text-right font-semibold tabular-nums text-foreground">{pct(sellerPct, 3)}</div>
+                </div>
+                <div className="mt-3 flex items-baseline justify-between border-t border-primary/20 pt-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isAdmin ? "Comissão vendedor" : "Você recebe"}</div>
+                  <div className="font-display text-2xl font-extrabold tabular-nums text-primary">{brl(sellerValor)}</div>
                 </div>
               </div>
             )}
