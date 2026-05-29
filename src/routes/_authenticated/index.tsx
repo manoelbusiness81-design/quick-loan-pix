@@ -36,10 +36,11 @@ function calcSaldoDevedor(parcela: number, prazo: number, taxaPctMes: number): n
 }
 
 function SimulatorPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const cardRef = useRef<HTMLDivElement>(null);
   const [coefs, setCoefs] = useState<Coef[]>([]);
   const [comms, setComms] = useState<Comm[]>([]);
+  const [sellerComms, setSellerComms] = useState<SellerComm[]>([]);
   const [selectedCoefId, setSelectedCoefId] = useState<string>("");
 
   const [cliente, setCliente] = useState("");
@@ -54,8 +55,12 @@ function SimulatorPage() {
   useEffect(() => {
     if (!user) return;
     supabase.from("coefficients").select("*").order("taxa").then(({ data }) => setCoefs((data as Coef[]) ?? []));
-    supabase.from("commissions").select("*").order("taxa").then(({ data }) => setComms((data as Comm[]) ?? []));
-  }, [user]);
+    if (isAdmin) {
+      supabase.from("commissions").select("*").order("taxa").then(({ data }) => setComms((data as Comm[]) ?? []));
+    }
+    (supabase.from as any)("seller_commissions").select("*").eq("user_id", user.id).order("taxa")
+      .then(({ data }: any) => setSellerComms((data as SellerComm[]) ?? []));
+  }, [user, isAdmin]);
 
   const coefSelecionado = coefs.find((c) => c.id === selectedCoefId);
   const coefValor = coefSelecionado ? Number(coefSelecionado.coeficiente) : 0;
