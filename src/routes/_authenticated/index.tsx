@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/")({
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; }
 interface Comm { id: string; taxa: number; percentual: number; }
+interface SellerComm { id: string; user_id: string; taxa: number; percentual: number; }
 
 interface ParcelaInput { id: string; parcela: string; prazoRestante: string; taxaAtual: string; }
 
