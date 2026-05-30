@@ -53,9 +53,15 @@ function SimulatorPage() {
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo">("refinanciamento");
+
   useEffect(() => {
     if (!user) return;
-    supabase.from("coefficients").select("*").order("taxa").then(({ data }) => setCoefs((data as Coef[]) ?? []));
+    (supabase.from("coefficients") as any)
+      .select("*")
+      .eq("modalidade", "refinanciamento")
+      .order("taxa")
+      .then(({ data }: any) => setCoefs((data as Coef[]) ?? []));
     if (isAdmin) {
       supabase.from("commissions").select("*").order("taxa").then(({ data }) => setComms((data as Comm[]) ?? []));
     }
