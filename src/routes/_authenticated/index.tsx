@@ -440,6 +440,7 @@ function SimulatorPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
