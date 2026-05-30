@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SimulationCard, type SimulationData, type ParcelaResumo } from "@/components/simulation-card";
+import { NovoEmprestimo } from "@/components/novo-emprestimo";
 import { brl, formatPhoneBR, onlyDigits, pct } from "@/lib/format";
 import { toast } from "sonner";
 
