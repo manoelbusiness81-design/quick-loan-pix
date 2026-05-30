@@ -213,15 +213,42 @@ function SimulatorPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">Simulador de Refinanciamento</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Combine até {MAX_PARCELAS} contratos. Saldo devedor calculado automaticamente.</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+            {modalidade === "refinanciamento" ? "Simulador de Refinanciamento" : "Simulador de Novo Empréstimo"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {modalidade === "refinanciamento"
+              ? `Combine até ${MAX_PARCELAS} contratos. Saldo devedor calculado automaticamente.`
+              : "Calcule valor liberado a partir da margem disponível."}
+          </p>
         </div>
         <Button variant="ghost" size="sm" onClick={reset} className="gap-2">
           <RefreshCw className="h-4 w-4" /> Limpar
         </Button>
       </div>
+
+      {/* Seletor de modalidade */}
+      <div className="inline-flex rounded-xl bg-secondary p-1">
+        {([
+          { v: "refinanciamento", label: "Refinanciamento" },
+          { v: "novo_emprestimo", label: "Novo Empréstimo" },
+        ] as const).map((m) => (
+          <button
+            key={m.v}
+            onClick={() => setModalidade(m.v)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              modalidade === m.v ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {modalidade === "novo_emprestimo" ? <NovoEmprestimo /> : null}
+      {modalidade === "refinanciamento" && (
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Form */}
