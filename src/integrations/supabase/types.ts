@@ -20,6 +20,7 @@ export type Database = {
           coeficiente: number
           created_at: string
           id: string
+          modalidade: string
           owner_id: string
           prazo: number
           taxa: number
@@ -30,6 +31,7 @@ export type Database = {
           coeficiente: number
           created_at?: string
           id?: string
+          modalidade?: string
           owner_id: string
           prazo: number
           taxa: number
@@ -40,6 +42,7 @@ export type Database = {
           coeficiente?: number
           created_at?: string
           id?: string
+          modalidade?: string
           owner_id?: string
           prazo?: number
           taxa?: number
