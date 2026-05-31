@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="leading-tight">
               <div className="font-display text-lg font-extrabold tracking-tight text-foreground">OCTA</div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Simulador • DRS</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Crédito e Gestão • DRS</div>
             </div>
           </Link>
 
