@@ -4,6 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import logoDrs from "@/assets/logo-drs.jpg";
 
 const navItems = [
   { to: "/", label: "Simulador", icon: Calculator },
@@ -28,13 +29,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gradient-surface">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-brand shadow-brand">
-              <Calculator className="h-5 w-5 text-brand-foreground" strokeWidth={2.5} />
+          <Link to="/" className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-octa shadow-octa">
+              <span className="font-display text-base font-extrabold tracking-tight text-octa-foreground">O</span>
             </div>
             <div className="leading-tight">
-              <div className="font-display text-base font-bold text-foreground">ConsigFlow</div>
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Simulador</div>
+              <div className="font-display text-lg font-extrabold tracking-tight text-foreground">OCTA</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Simulador • DRS</div>
             </div>
           </Link>
 
@@ -60,8 +61,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="hidden items-center gap-3 md:flex">
             <div className="text-right leading-tight">
               <div className="text-xs font-medium text-foreground">{user?.user_metadata?.full_name || user?.email}</div>
-              {isAdmin && <div className="text-[10px] font-semibold uppercase text-brand">Admin</div>}
+              {isAdmin && <div className="text-[10px] font-semibold uppercase tracking-wider text-octa">Admin</div>}
             </div>
+            <img src={logoDrs} alt="DRS Consultoria" className="h-8 w-8 rounded-md object-contain" />
             <button onClick={handleLogout} className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Sair">
               <LogOut className="h-4 w-4" />
             </button>
