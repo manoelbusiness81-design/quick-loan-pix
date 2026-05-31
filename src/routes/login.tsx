@@ -46,7 +46,7 @@ function LoginPage() {
               <img src={logoDrs} alt="DRS Consultoria" className="h-full w-full object-contain" />
             </div>
             <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-white">OCTA</h1>
-            <p className="mt-1 text-sm text-white/60">Plataforma de simulação · DRS Consultoria</p>
+            <p className="mt-1 text-sm text-white/60">Plataforma de Crédito e Gestão Comercial - DRS Consultoria</p>
           </div>
 
           <div className="rounded-2xl bg-card p-7 shadow-elevated">
