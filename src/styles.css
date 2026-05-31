@@ -34,6 +34,10 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-octa: var(--octa);
+  --color-octa-foreground: var(--octa-foreground);
+  --color-amber: var(--amber);
+  --color-amber-foreground: var(--amber-foreground);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -49,60 +53,70 @@
 :root {
   --radius: 0.875rem;
 
-  /* Fintech: deep navy + emerald */
-  --background: oklch(0.985 0.005 240);
-  --foreground: oklch(0.18 0.04 250);
+  /* OCTA: deep navy + royal blue + amber accent */
+  --background: oklch(0.985 0.008 250);
+  --foreground: oklch(0.17 0.06 265);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.04 250);
+  --card-foreground: oklch(0.17 0.06 265);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.04 250);
+  --popover-foreground: oklch(0.17 0.06 265);
 
-  /* Primary = deep navy */
-  --primary: oklch(0.22 0.06 255);
-  --primary-foreground: oklch(0.985 0.005 240);
+  /* Primary = OCTA deep navy (#0f1f5c-ish) */
+  --primary: oklch(0.26 0.13 265);
+  --primary-foreground: oklch(0.99 0.005 250);
 
-  /* Brand = emerald (CTA, valor liberado) */
+  /* Octa = royal blue (interface CTA & accents) */
+  --octa: oklch(0.52 0.18 255);
+  --octa-foreground: oklch(0.99 0.005 250);
+
+  /* Amber accent (DRS yellow) */
+  --amber: oklch(0.78 0.16 75);
+  --amber-foreground: oklch(0.2 0.06 265);
+
+  /* Brand (kept emerald) — client-facing surfaces only */
   --brand: oklch(0.62 0.16 155);
   --brand-foreground: oklch(0.99 0.005 160);
 
-  /* Success */
   --success: oklch(0.62 0.16 155);
   --success-foreground: oklch(0.99 0.005 160);
 
-  --secondary: oklch(0.96 0.01 240);
-  --secondary-foreground: oklch(0.22 0.06 255);
+  --secondary: oklch(0.96 0.012 255);
+  --secondary-foreground: oklch(0.26 0.13 265);
 
-  --muted: oklch(0.96 0.01 240);
-  --muted-foreground: oklch(0.5 0.03 250);
+  --muted: oklch(0.96 0.012 255);
+  --muted-foreground: oklch(0.5 0.04 260);
 
-  --accent: oklch(0.94 0.03 160);
-  --accent-foreground: oklch(0.22 0.06 255);
+  --accent: oklch(0.95 0.05 75);
+  --accent-foreground: oklch(0.26 0.13 265);
 
   --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.99 0.005 25);
 
-  --border: oklch(0.92 0.01 240);
-  --input: oklch(0.92 0.01 240);
-  --ring: oklch(0.62 0.16 155);
+  --border: oklch(0.92 0.015 255);
+  --input: oklch(0.92 0.015 255);
+  --ring: oklch(0.52 0.18 255);
 
   --gradient-brand: linear-gradient(135deg, oklch(0.62 0.16 155), oklch(0.55 0.14 175));
-  --gradient-navy: linear-gradient(135deg, oklch(0.22 0.06 255), oklch(0.28 0.07 245));
-  --gradient-surface: linear-gradient(180deg, oklch(0.99 0.005 240), oklch(0.96 0.01 240));
+  --gradient-octa: linear-gradient(135deg, oklch(0.26 0.13 265), oklch(0.52 0.18 255));
+  --gradient-navy: linear-gradient(135deg, oklch(0.22 0.1 265), oklch(0.32 0.14 260));
+  --gradient-amber: linear-gradient(135deg, oklch(0.78 0.16 75), oklch(0.72 0.17 60));
+  --gradient-surface: linear-gradient(180deg, oklch(0.99 0.005 255), oklch(0.96 0.012 255));
 
-  --shadow-soft: 0 1px 2px oklch(0.22 0.06 255 / 0.06), 0 4px 16px oklch(0.22 0.06 255 / 0.06);
-  --shadow-elevated: 0 4px 20px oklch(0.22 0.06 255 / 0.10), 0 16px 40px oklch(0.22 0.06 255 / 0.08);
+  --shadow-soft: 0 1px 2px oklch(0.22 0.1 265 / 0.06), 0 4px 16px oklch(0.22 0.1 265 / 0.06);
+  --shadow-elevated: 0 4px 20px oklch(0.22 0.1 265 / 0.10), 0 16px 40px oklch(0.22 0.1 265 / 0.08);
   --shadow-brand: 0 8px 28px oklch(0.62 0.16 155 / 0.35);
+  --shadow-octa: 0 8px 28px oklch(0.52 0.18 255 / 0.35);
 
-  --sidebar: oklch(0.22 0.06 255);
-  --sidebar-foreground: oklch(0.985 0.005 240);
-  --sidebar-primary: oklch(0.62 0.16 155);
-  --sidebar-primary-foreground: oklch(0.99 0.005 160);
-  --sidebar-accent: oklch(0.28 0.07 245);
-  --sidebar-accent-foreground: oklch(0.985 0.005 240);
-  --sidebar-border: oklch(0.3 0.06 250);
-  --sidebar-ring: oklch(0.62 0.16 155);
+  --sidebar: oklch(0.22 0.1 265);
+  --sidebar-foreground: oklch(0.985 0.005 250);
+  --sidebar-primary: oklch(0.52 0.18 255);
+  --sidebar-primary-foreground: oklch(0.99 0.005 250);
+  --sidebar-accent: oklch(0.32 0.14 260);
+  --sidebar-accent-foreground: oklch(0.985 0.005 250);
+  --sidebar-border: oklch(0.3 0.1 263);
+  --sidebar-ring: oklch(0.52 0.18 255);
 }
 
 @layer base {
@@ -118,10 +132,13 @@
 
 @layer utilities {
   .bg-gradient-brand { background: var(--gradient-brand); }
+  .bg-gradient-octa { background: var(--gradient-octa); }
   .bg-gradient-navy { background: var(--gradient-navy); }
+  .bg-gradient-amber { background: var(--gradient-amber); }
   .bg-gradient-surface { background: var(--gradient-surface); }
   .shadow-soft { box-shadow: var(--shadow-soft); }
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
   .shadow-brand { box-shadow: var(--shadow-brand); }
+  .shadow-octa { box-shadow: var(--shadow-octa); }
   .tabular-nums { font-variant-numeric: tabular-nums; }
 }
