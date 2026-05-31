@@ -1,11 +1,12 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Calculator, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import logoDrs from "@/assets/logo-drs.jpg";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -41,11 +42,11 @@ function LoginPage() {
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-brand shadow-brand">
-              <Calculator className="h-7 w-7 text-brand-foreground" strokeWidth={2.5} />
+            <div className="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-white p-2 shadow-elevated">
+              <img src={logoDrs} alt="DRS Consultoria" className="h-full w-full object-contain" />
             </div>
-            <h1 className="mt-5 font-display text-3xl font-bold text-white">ConsigFlow</h1>
-            <p className="mt-1 text-sm text-white/60">Simulador profissional de consignado</p>
+            <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-white">OCTA</h1>
+            <p className="mt-1 text-sm text-white/60">Plataforma de simulação · DRS Consultoria</p>
           </div>
 
           <div className="rounded-2xl bg-card p-7 shadow-elevated">
@@ -61,7 +62,7 @@ function LoginPage() {
                 <Label htmlFor="password">Senha</Label>
                 <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-11" placeholder="••••••••" />
               </div>
-              <Button type="submit" disabled={loading} className="h-12 w-full bg-gradient-brand text-base font-semibold text-brand-foreground shadow-brand hover:opacity-95">
+              <Button type="submit" disabled={loading} className="h-12 w-full bg-gradient-octa text-base font-semibold text-octa-foreground shadow-octa hover:opacity-95">
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
               </Button>
             </form>
