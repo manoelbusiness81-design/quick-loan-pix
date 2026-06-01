@@ -12,8 +12,35 @@ import { NovoEmprestimoCard, type NovoEmprestimoOpcao } from "./novo-emprestimo-
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade?: string; }
 
-const PRAZOS_FIXOS = [108, 54, 36] as const;
+const TAXA_MENSAL = 0.02; // C1 na planilha Ex1
 const toNum = (s: string) => parseFloat((s || "").replace(/\./g, "").replace(",", ".")) || 0;
+
+/**
+ * Reproduz a lógica da aba Ex1 da planilha de referência.
+ * - Valor Liberado: parcela / coef_108 (único — mesmo valor para todos os cenários).
+ * - 108x: parcela informada.
+ * - 36x: média mensal = (36·P + Σ pv(k), k=1..108) / 36  →  P + Σ/36  (bloco Ex1 linhas 59–94).
+ * - 54x: média mensal = (54·P + Σ pv(k), k=55..108) / 40             (bloco Ex1 linhas 98–151, M98 = J152/40).
+ *   onde pv(k) = P / (1 + 0,02)^k.
+ */
+function calcularCenarios(parcela: number, coef108: number) {
+  const pv = (k: number) => parcela / Math.pow(1 + TAXA_MENSAL, k);
+  const valorLiberado = coef108 > 0 ? parcela / coef108 : 0;
+
+  let soma108 = 0;
+  for (let k = 1; k <= 108; k++) soma108 += pv(k);
+  const parcela36 = parcela + soma108 / 36;
+
+  let soma54 = 0;
+  for (let k = 55; k <= 108; k++) soma54 += pv(k);
+  const parcela54 = (54 * parcela + soma54) / 40;
+
+  return [
+    { prazo: 108, parcela, valorLiberado },
+    { prazo: 54, parcela: parcela54, valorLiberado },
+    { prazo: 36, parcela: parcela36, valorLiberado },
+  ] as NovoEmprestimoOpcao[];
+}
 
 export function NovoEmprestimo() {
   const { user, isAdmin } = useAuth();
@@ -30,30 +57,24 @@ export function NovoEmprestimo() {
     (supabase.from("coefficients") as any)
       .select("*")
       .eq("modalidade", "novo_emprestimo")
-      .order("prazo", { ascending: false })
+      .eq("prazo", 108)
       .then(({ data }: any) => setCoefs((data as Coef[]) ?? []));
   }, [user]);
 
   const parcelaN = toNum(parcela);
 
-  // Para cada prazo fixo, pega o MENOR coeficiente cadastrado (melhor opção para o cliente).
-  const opcoes: NovoEmprestimoOpcao[] = useMemo(() => {
-    return PRAZOS_FIXOS.map((prazo) => {
-      const candidatos = coefs.filter((c) => Number(c.prazo) === prazo && Number(c.coeficiente) > 0);
-      if (candidatos.length === 0 || parcelaN <= 0) {
-        return { prazo, parcela: parcelaN, valorLiberado: 0 };
-      }
-      const melhor = candidatos.reduce((a, b) => (Number(a.coeficiente) < Number(b.coeficiente) ? a : b));
-      const vl = parcelaN / Number(melhor.coeficiente);
-      return { prazo, parcela: parcelaN, valorLiberado: vl };
-    });
-  }, [coefs, parcelaN]);
+  // Melhor coeficiente de 108x cadastrado (menor = maior valor liberado).
+  const coef108 = useMemo(() => {
+    const v = coefs.filter((c) => Number(c.coeficiente) > 0);
+    if (v.length === 0) return 0;
+    return v.reduce((a, b) => (Number(a.coeficiente) < Number(b.coeficiente) ? a : b)).coeficiente;
+  }, [coefs]);
 
-  const opcaoDestaque = opcoes.reduce((a, b) => (a.valorLiberado > b.valorLiberado ? a : b), opcoes[0]);
-  const valorLiberadoDestaque = opcaoDestaque?.valorLiberado ?? 0;
+  const opcoes = useMemo(() => calcularCenarios(parcelaN, Number(coef108)), [parcelaN, coef108]);
 
-  const coefsFaltando = PRAZOS_FIXOS.filter((p) => !coefs.some((c) => Number(c.prazo) === p));
-  const canSimular = !!cliente && parcelaN > 0 && opcoes.every((o) => o.valorLiberado > 0);
+  const valorLiberado = opcoes[0]?.valorLiberado ?? 0;
+  const faltaCoef = coef108 <= 0;
+  const canSimular = !!cliente && parcelaN > 0 && !faltaCoef;
 
   const generatePng = async (): Promise<Blob> => {
     if (!cardRef.current) throw new Error("Cartão não encontrado");
@@ -65,15 +86,13 @@ export function NovoEmprestimo() {
   const handleSimular = () => {
     if (!cliente) return toast.error("Informe o nome do cliente.");
     if (parcelaN <= 0) return toast.error("Informe o valor da parcela.");
-    if (coefsFaltando.length > 0) {
-      return toast.error(`Cadastre coeficientes para os prazos: ${coefsFaltando.join(", ")}`);
-    }
+    if (faltaCoef) return toast.error("Cadastre o coeficiente de 108x para Novo Empréstimo.");
     setShowPreview(true);
     setTimeout(() => document.getElementById("ne-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const handleSend = async () => {
-    if (!canSimular) return toast.error("Preencha os dados e verifique os coeficientes.");
+    if (!canSimular) return toast.error("Preencha os dados e verifique o coeficiente de 108x.");
     const phone = onlyDigits(telefone);
     if (phone.length < 10) return toast.error("Informe um WhatsApp válido.");
     setSending(true);
@@ -96,7 +115,7 @@ export function NovoEmprestimo() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const valorFmt = brl(valorLiberadoDestaque);
+      const valorFmt = brl(valorLiberado);
       const msg = encodeURIComponent(
         `Simulação sem compromisso, com valor liberado de ${valorFmt}, e fazendo conosco você ganha 3 meses de carência.`
       );
@@ -148,27 +167,33 @@ export function NovoEmprestimo() {
             </Field>
           </div>
 
-          {coefsFaltando.length > 0 && (
+          {faltaCoef && (
             <div className="mt-4 rounded-xl border border-dashed border-amber/60 bg-amber/10 p-3 text-xs text-foreground">
-              Cadastre coeficientes de <strong>Novo Empréstimo</strong> para os prazos: <strong>{coefsFaltando.join(", ")}</strong>.
+              Cadastre o coeficiente de <strong>108x</strong> em Novo Empréstimo. Os cenários de 54x e 36x são calculados pela lógica de antecipação (Ex1).
             </div>
           )}
 
-          {parcelaN > 0 && opcoes.some((o) => o.valorLiberado > 0) && (
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              {opcoes.map((o) => (
-                <div key={o.prazo} className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{o.prazo}x</div>
-                  <div className="mt-1 font-display text-base font-extrabold tabular-nums text-brand">{brl(o.valorLiberado)}</div>
-                  <div className="text-[10px] text-muted-foreground tabular-nums">{brl(o.parcela)} /mês</div>
-                </div>
-              ))}
-            </div>
+          {parcelaN > 0 && valorLiberado > 0 && (
+            <>
+              <div className="mt-5 rounded-xl border border-border bg-secondary/40 p-4 text-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Valor liberado</div>
+                <div className="mt-1 font-display text-2xl font-extrabold tabular-nums text-brand">{brl(valorLiberado)}</div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {opcoes.map((o) => (
+                  <div key={o.prazo} className="rounded-xl border border-border bg-card p-3 text-center">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{o.prazo}x</div>
+                    <div className="mt-1 font-display text-base font-extrabold tabular-nums text-foreground">{brl(o.parcela)}</div>
+                    <div className="text-[10px] text-muted-foreground">/mês</div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {isAdmin && parcelaN > 0 && (
             <p className="mt-3 text-[10px] text-muted-foreground">
-              Cálculo: Valor Liberado = Parcela ÷ Coeficiente cadastrado por prazo.
+              Cálculo (Ex1): VL = Parcela ÷ Coef108. Parcela 36x = P + Σ pv(1..108)/36. Parcela 54x = (54·P + Σ pv(55..108))/40. pv(k)=P/1,02ᵏ.
             </p>
           )}
 
