@@ -1,33 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
-import { Calculator, Sparkles, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toPng } from "html-to-image";
+import { Send, Sparkles, Loader2, Copy, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { brl, pct } from "@/lib/format";
+import { brl, formatPhoneBR, onlyDigits } from "@/lib/format";
+import { toast } from "sonner";
+import { NovoEmprestimoCard, type NovoEmprestimoOpcao } from "./novo-emprestimo-card";
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade?: string; }
 
+const PRAZOS_FIXOS = [108, 54, 36] as const;
 const toNum = (s: string) => parseFloat((s || "").replace(/\./g, "").replace(",", ".")) || 0;
-
-/** VP (valor presente) de N parcelas iguais à taxa i (decimal/mês). */
-function vp(parcela: number, n: number, i: number) {
-  if (!parcela || !n) return 0;
-  if (i <= 0) return parcela * n;
-  return parcela * (1 - Math.pow(1 + i, -n)) / i;
-}
 
 export function NovoEmprestimo() {
   const { user, isAdmin } = useAuth();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [coefs, setCoefs] = useState<Coef[]>([]);
-  const [margem, setMargem] = useState("");
-  const [comissaoPct, setComissaoPct] = useState("");
-  const [prazoSelecionado, setPrazoSelecionado] = useState<string>("");
-  const [antecipadas, setAntecipadas] = useState<{ id: string; qtd: string; pago: boolean }[]>([
-    { id: "a1", qtd: "", pago: false },
-  ]);
+  const [cliente, setCliente] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [parcela, setParcela] = useState("");
+  const [sending, setSending] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -38,226 +34,177 @@ export function NovoEmprestimo() {
       .then(({ data }: any) => setCoefs((data as Coef[]) ?? []));
   }, [user]);
 
-  const margemN = toNum(margem);
-  const comissaoN = toNum(comissaoPct);
+  const parcelaN = toNum(parcela);
 
-  // grade automática: todos os prazos cadastrados
-  const grade = useMemo(() => {
-    return coefs.map((c) => {
-      const valorLiberado = c.coeficiente > 0 ? margemN / Number(c.coeficiente) : 0;
-      return {
-        id: c.id,
-        prazo: c.prazo,
-        taxa: Number(c.taxa),
-        coef: Number(c.coeficiente),
-        parcela: margemN,
-        valorLiberado,
-        comissao: (valorLiberado * comissaoN) / 100,
-      };
+  // Para cada prazo fixo, pega o MENOR coeficiente cadastrado (melhor opção para o cliente).
+  const opcoes: NovoEmprestimoOpcao[] = useMemo(() => {
+    return PRAZOS_FIXOS.map((prazo) => {
+      const candidatos = coefs.filter((c) => Number(c.prazo) === prazo && Number(c.coeficiente) > 0);
+      if (candidatos.length === 0 || parcelaN <= 0) {
+        return { prazo, parcela: parcelaN, valorLiberado: 0 };
+      }
+      const melhor = candidatos.reduce((a, b) => (Number(a.coeficiente) < Number(b.coeficiente) ? a : b));
+      const vl = parcelaN / Number(melhor.coeficiente);
+      return { prazo, parcela: parcelaN, valorLiberado: vl };
     });
-  }, [coefs, margemN, comissaoN]);
+  }, [coefs, parcelaN]);
 
-  const coefSel = coefs.find((c) => c.id === prazoSelecionado);
-  const valorLiberadoSel = coefSel && coefSel.coeficiente > 0 ? margemN / Number(coefSel.coeficiente) : 0;
-  const comissaoSel = (valorLiberadoSel * comissaoN) / 100;
-  const taxaSelDec = coefSel ? Number(coefSel.taxa) / 100 : 0;
+  const opcaoDestaque = opcoes.reduce((a, b) => (a.valorLiberado > b.valorLiberado ? a : b), opcoes[0]);
+  const valorLiberadoDestaque = opcaoDestaque?.valorLiberado ?? 0;
 
-  // antecipadas: cada linha = quantidade de parcelas a antecipar
-  const linhasAntecip = antecipadas.map((a) => {
-    const qtd = parseInt(a.qtd) || 0;
-    const vpVal = vp(margemN, qtd, taxaSelDec);
-    return { ...a, qtd, vp: vpVal, mensal: margemN };
-  });
+  const coefsFaltando = PRAZOS_FIXOS.filter((p) => !coefs.some((c) => Number(c.prazo) === p));
+  const canSimular = !!cliente && parcelaN > 0 && opcoes.every((o) => o.valorLiberado > 0);
+
+  const generatePng = async (): Promise<Blob> => {
+    if (!cardRef.current) throw new Error("Cartão não encontrado");
+    const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true, backgroundColor: "#ffffff" });
+    const res = await fetch(dataUrl);
+    return res.blob();
+  };
+
+  const handleSimular = () => {
+    if (!cliente) return toast.error("Informe o nome do cliente.");
+    if (parcelaN <= 0) return toast.error("Informe o valor da parcela.");
+    if (coefsFaltando.length > 0) {
+      return toast.error(`Cadastre coeficientes para os prazos: ${coefsFaltando.join(", ")}`);
+    }
+    setShowPreview(true);
+    setTimeout(() => document.getElementById("ne-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
+
+  const handleSend = async () => {
+    if (!canSimular) return toast.error("Preencha os dados e verifique os coeficientes.");
+    const phone = onlyDigits(telefone);
+    if (phone.length < 10) return toast.error("Informe um WhatsApp válido.");
+    setSending(true);
+    try {
+      const blob = await generatePng();
+      let copied = false;
+      try {
+        if (navigator.clipboard && "write" in navigator.clipboard) {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          copied = true;
+        }
+      } catch { copied = false; }
+      if (!copied) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `simulacao-${cliente.replace(/\s+/g, "-").toLowerCase()}.png`;
+        a.click(); URL.revokeObjectURL(url);
+        toast.info("Imagem baixada", { description: "Anexe no WhatsApp que acabou de abrir." });
+      } else {
+        toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
+      }
+      const ddi = phone.length <= 11 ? `55${phone}` : phone;
+      const valorFmt = brl(valorLiberadoDestaque);
+      const msg = encodeURIComponent(
+        `Simulação sem compromisso, com valor liberado de ${valorFmt}, e fazendo conosco você ganha 3 meses de carência.`
+      );
+      window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao gerar imagem");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      const blob = await generatePng();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `simulacao-${cliente.replace(/\s+/g, "-").toLowerCase() || "cliente"}.png`;
+      a.click(); URL.revokeObjectURL(url);
+      toast.success("Imagem baixada");
+    } catch { toast.error("Erro ao baixar"); }
+  };
+
+  const handleCopy = async () => {
+    try {
+      const blob = await generatePng();
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success("Imagem copiada");
+    } catch { toast.error("Seu navegador não permitiu copiar a imagem"); }
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Form */}
       <div className="space-y-4">
         <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
-          <h2 className="font-display text-lg font-bold text-foreground">Novo Empréstimo</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Informe a margem disponível. O valor liberado é calculado por coeficiente.
-          </p>
-
+          <h2 className="font-display text-lg font-bold text-foreground">Dados do cliente</h2>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Margem disponível (parcela mensal)">
-              <Input value={margem} onChange={(e) => setMargem(e.target.value)} className="h-11" placeholder="567,35" inputMode="decimal" />
+            <Field label="Nome do cliente">
+              <Input value={cliente} onChange={(e) => setCliente(e.target.value)} className="h-11" placeholder="João da Silva" />
             </Field>
-            <Field label="Comissão (%)">
-              <Input value={comissaoPct} onChange={(e) => setComissaoPct(e.target.value)} className="h-11" placeholder="3,00" inputMode="decimal" />
+            <Field label="WhatsApp">
+              <Input value={telefone} onChange={(e) => setTelefone(formatPhoneBR(e.target.value))} className="h-11" placeholder="(11) 99999-9999" inputMode="numeric" />
+            </Field>
+          </div>
+          <div className="mt-3">
+            <Field label="Valor da parcela (margem disponível)">
+              <Input value={parcela} onChange={(e) => setParcela(e.target.value)} className="h-11" placeholder="567,35" inputMode="decimal" />
             </Field>
           </div>
 
-          <div className="mt-4">
-            <Label className="text-xs font-semibold text-muted-foreground">Prazo / Coeficiente</Label>
-            {coefs.length === 0 ? (
-              <div className="mt-1 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                Nenhum coeficiente de <strong>Novo Empréstimo</strong> cadastrado. Cadastre na aba <strong>Coeficientes</strong>.
-              </div>
-            ) : (
-              <Select value={prazoSelecionado} onValueChange={setPrazoSelecionado}>
-                <SelectTrigger className="h-11 mt-1"><SelectValue placeholder="Selecione um prazo" /></SelectTrigger>
-                <SelectContent>
-                  {coefs.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.prazo} parcelas · {pct(Number(c.taxa))} · coef {Number(c.coeficiente).toFixed(8)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          {coefSel && margemN > 0 && (
-            <div className="mt-4 rounded-xl bg-gradient-brand p-5 text-brand-foreground shadow-brand">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] opacity-80">Valor liberado</div>
-              <div className="font-display text-4xl font-extrabold tabular-nums" style={{ letterSpacing: "-0.03em" }}>
-                {brl(valorLiberadoSel)}
-              </div>
-              <div className="mt-1 text-sm font-medium opacity-90">
-                {coefSel.prazo}× de {brl(margemN)} · taxa {pct(Number(coefSel.taxa))}
-              </div>
+          {coefsFaltando.length > 0 && (
+            <div className="mt-4 rounded-xl border border-dashed border-amber/60 bg-amber/10 p-3 text-xs text-foreground">
+              Cadastre coeficientes de <strong>Novo Empréstimo</strong> para os prazos: <strong>{coefsFaltando.join(", ")}</strong>.
             </div>
           )}
 
-          {coefSel && margemN > 0 && comissaoN > 0 && (
-            <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-primary">
-                <Sparkles className="h-3.5 w-3.5" /> {isAdmin ? "Comissão (interno)" : "Minha comissão"}
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                <div className="text-muted-foreground">Base (valor liberado)</div>
-                <div className="text-right font-semibold tabular-nums text-foreground">{brl(valorLiberadoSel)}</div>
-                <div className="text-muted-foreground">% comissão</div>
-                <div className="text-right font-semibold tabular-nums text-foreground">{pct(comissaoN, 3)}</div>
-              </div>
-              <div className="mt-3 flex items-baseline justify-between border-t border-primary/20 pt-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Comissão</div>
-                <div className="font-display text-2xl font-extrabold tabular-nums text-primary">{brl(comissaoSel)}</div>
-              </div>
-              <p className="mt-2 text-[10px] text-muted-foreground">
-                Comissão é interna — não é exibida em comprovantes ou imagens enviadas ao cliente.
-              </p>
+          {parcelaN > 0 && opcoes.some((o) => o.valorLiberado > 0) && (
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {opcoes.map((o) => (
+                <div key={o.prazo} className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{o.prazo}x</div>
+                  <div className="mt-1 font-display text-base font-extrabold tabular-nums text-brand">{brl(o.valorLiberado)}</div>
+                  <div className="text-[10px] text-muted-foreground tabular-nums">{brl(o.parcela)} /mês</div>
+                </div>
+              ))}
             </div>
           )}
+
+          {isAdmin && parcelaN > 0 && (
+            <p className="mt-3 text-[10px] text-muted-foreground">
+              Cálculo: Valor Liberado = Parcela ÷ Coeficiente cadastrado por prazo.
+            </p>
+          )}
+
+          <Button onClick={handleSimular} disabled={!canSimular} className="mt-5 h-14 w-full bg-primary text-base font-semibold text-primary-foreground shadow-elevated hover:bg-primary/90">
+            <Sparkles className="mr-2 h-5 w-5" /> Simular
+          </Button>
         </div>
-
-        {/* Parcelas antecipadas */}
-        {coefSel && margemN > 0 && (
-          <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-lg font-bold text-foreground">Parcelas antecipadas</h2>
-                <p className="mt-1 text-xs text-muted-foreground">Valor presente (VP) trazido pela taxa do contrato.</p>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setAntecipadas((a) => [...a, { id: Math.random().toString(36).slice(2, 8), qtd: "", pago: false }])} className="gap-1">
-                <Plus className="h-4 w-4" /> Adicionar
-              </Button>
-            </div>
-
-            <div className="mt-4 overflow-hidden rounded-xl border border-border">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Qtd. parcelas</th>
-                    <th className="px-3 py-2 text-right">Parcela real</th>
-                    <th className="px-3 py-2 text-right">VP (antecipado)</th>
-                    <th className="px-3 py-2 text-right">Mensal</th>
-                    <th className="px-3 py-2 text-center">Status</th>
-                    <th className="px-3 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {linhasAntecip.map((l, idx) => (
-                    <tr key={l.id} className="tabular-nums">
-                      <td className="px-3 py-2">
-                        <Input
-                          value={antecipadas[idx].qtd}
-                          onChange={(e) => setAntecipadas((arr) => arr.map((x, i) => i === idx ? { ...x, qtd: e.target.value.replace(/\D/g, "") } : x))}
-                          className="h-9 w-20"
-                          placeholder="6"
-                          inputMode="numeric"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-right">{brl(margemN)}</td>
-                      <td className="px-3 py-2 text-right font-bold text-brand">{brl(l.vp)}</td>
-                      <td className="px-3 py-2 text-right">{brl(l.mensal)}</td>
-                      <td className="px-3 py-2 text-center">
-                        <button
-                          onClick={() => setAntecipadas((arr) => arr.map((x, i) => i === idx ? { ...x, pago: !x.pago } : x))}
-                          className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${l.pago ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"}`}
-                        >
-                          {l.pago ? "Pago" : "Não pago"}
-                        </button>
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {antecipadas.length > 1 && (
-                          <button onClick={() => setAntecipadas((arr) => arr.filter((_, i) => i !== idx))} className="text-muted-foreground hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Grade de simulações automática */}
-      <div className="space-y-4">
+      {/* Preview */}
+      <div id="ne-preview" className="space-y-4">
         <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
-          <div className="flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-brand" />
-            <h2 className="font-display text-lg font-bold text-foreground">Simulações automáticas</h2>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Gerada para todos os prazos cadastrados a partir da margem informada.
-          </p>
+          <h2 className="font-display text-lg font-bold text-foreground">Pré-visualização</h2>
+          <p className="mt-1 text-xs text-muted-foreground">É exatamente isso que o cliente vai receber.</p>
 
-          {margemN <= 0 ? (
-            <div className="mt-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              Informe a margem para visualizar as opções.
+          <div className="mt-4 overflow-x-auto rounded-xl bg-secondary/40 p-3">
+            <div className="origin-top-left scale-[0.55] sm:scale-[0.6]" style={{ width: 720, height: 820 }}>
+              <NovoEmprestimoCard ref={cardRef} data={{ cliente, opcoes }} />
             </div>
-          ) : grade.length === 0 ? (
-            <div className="mt-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              Nenhum coeficiente cadastrado para Novo Empréstimo.
-            </div>
-          ) : (
-            <div className="mt-4 overflow-hidden rounded-xl border border-border">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Prazo</th>
-                    <th className="px-3 py-2 text-right">Parcela</th>
-                    <th className="px-3 py-2 text-right">Valor liberado</th>
-                    {isAdmin && <th className="px-3 py-2 text-right">Comissão</th>}
-                    <th className="px-3 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {grade.map((g) => {
-                    const ativa = g.id === prazoSelecionado;
-                    return (
-                      <tr key={g.id} className={`tabular-nums transition ${ativa ? "bg-brand/10" : ""}`}>
-                        <td className="px-3 py-2 font-semibold text-foreground">{g.prazo}m</td>
-                        <td className="px-3 py-2 text-right">{brl(g.parcela)}</td>
-                        <td className="px-3 py-2 text-right font-bold text-brand">{brl(g.valorLiberado)}</td>
-                        {isAdmin && <td className="px-3 py-2 text-right text-muted-foreground">{brl(g.comissao)}</td>}
-                        <td className="px-3 py-2 text-right">
-                          <Button size="sm" variant={ativa ? "default" : "outline"} className="h-8" onClick={() => setPrazoSelecionado(g.id)}>
-                            {ativa ? "Selecionado" : "Selecionar"}
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={handleDownload} disabled={!showPreview} className="h-11"><Download className="mr-2 h-4 w-4" /> Baixar</Button>
+            <Button variant="outline" onClick={handleCopy} disabled={!showPreview} className="h-11"><Copy className="mr-2 h-4 w-4" /> Copiar</Button>
+          </div>
+
+          <Button
+            onClick={handleSend}
+            disabled={sending || !canSimular || onlyDigits(telefone).length < 10}
+            className="mt-3 h-14 w-full bg-gradient-brand text-base font-semibold text-brand-foreground shadow-brand hover:opacity-95"
+          >
+            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Send className="mr-2 h-5 w-5" /> Enviar Simulação</>}
+          </Button>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+            A imagem é copiada e o WhatsApp abre — basta colar no chat (Ctrl+V).
+          </p>
         </div>
       </div>
     </div>
