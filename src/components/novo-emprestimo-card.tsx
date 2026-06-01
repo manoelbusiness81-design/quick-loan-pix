@@ -15,7 +15,7 @@ export interface NovoEmprestimoCardData {
 }
 
 export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprestimoCardData }>(({ data }, ref) => {
-  const destaque = data.opcoes.reduce((a, b) => (a.valorLiberado > b.valorLiberado ? a : b), data.opcoes[0] ?? { prazo: 0, parcela: 0, valorLiberado: 0 });
+  const valorLiberado = data.opcoes[0]?.valorLiberado ?? 0;
   return (
     <div
       ref={ref}
@@ -41,7 +41,7 @@ export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprest
           </div>
         </div>
 
-        {/* Hero — maior valor liberado */}
+        {/* Hero — valor liberado único */}
         <div className="mt-7 rounded-2xl bg-gradient-brand p-6 shadow-brand">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-foreground/80">
             Valor Liberado
@@ -50,10 +50,10 @@ export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprest
             className="mt-1 font-display font-extrabold leading-none text-brand-foreground tabular-nums"
             style={{ fontSize: 64, letterSpacing: "-0.04em" }}
           >
-            {brl(destaque.valorLiberado)}
+            {brl(valorLiberado)}
           </div>
           <div className="mt-2 text-sm font-medium text-brand-foreground/85">
-            Em até {destaque.prazo}x de {brl(destaque.parcela)}
+            Escolha o prazo que melhor se ajusta à sua parcela
           </div>
         </div>
       </div>
@@ -68,16 +68,14 @@ export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprest
             <thead className="bg-secondary">
               <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-2.5">Prazo</th>
-                <th className="px-4 py-2.5 text-right">Parcela</th>
-                <th className="px-4 py-2.5 text-right">Valor Liberado</th>
+                <th className="px-4 py-2.5 text-right">Parcela equivalente</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {data.opcoes.map((o) => (
                 <tr key={o.prazo} className="tabular-nums">
                   <td className="px-4 py-3 font-semibold text-foreground">{o.prazo}x</td>
-                  <td className="px-4 py-3 text-right text-foreground">{brl(o.parcela)}</td>
-                  <td className="px-4 py-3 text-right font-display text-base font-extrabold text-brand">{brl(o.valorLiberado)}</td>
+                  <td className="px-4 py-3 text-right font-display text-base font-extrabold text-brand">{brl(o.parcela)}</td>
                 </tr>
               ))}
             </tbody>
