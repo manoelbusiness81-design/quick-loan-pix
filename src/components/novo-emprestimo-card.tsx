@@ -68,16 +68,14 @@ export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprest
             <thead className="bg-secondary">
               <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-2.5">Prazo</th>
-                <th className="px-4 py-2.5 text-right">Parcela</th>
-                <th className="px-4 py-2.5 text-right">Valor Liberado</th>
+                <th className="px-4 py-2.5 text-right">Parcela equivalente</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {data.opcoes.map((o) => (
                 <tr key={o.prazo} className="tabular-nums">
                   <td className="px-4 py-3 font-semibold text-foreground">{o.prazo}x</td>
-                  <td className="px-4 py-3 text-right text-foreground">{brl(o.parcela)}</td>
-                  <td className="px-4 py-3 text-right font-display text-base font-extrabold text-brand">{brl(o.valorLiberado)}</td>
+                  <td className="px-4 py-3 text-right font-display text-base font-extrabold text-brand">{brl(o.parcela)}</td>
                 </tr>
               ))}
             </tbody>
