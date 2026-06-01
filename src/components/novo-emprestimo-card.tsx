@@ -15,7 +15,7 @@ export interface NovoEmprestimoCardData {
 }
 
 export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprestimoCardData }>(({ data }, ref) => {
-  const destaque = data.opcoes.reduce((a, b) => (a.valorLiberado > b.valorLiberado ? a : b), data.opcoes[0] ?? { prazo: 0, parcela: 0, valorLiberado: 0 });
+  const valorLiberado = data.opcoes[0]?.valorLiberado ?? 0;
   return (
     <div
       ref={ref}
@@ -41,7 +41,7 @@ export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprest
           </div>
         </div>
 
-        {/* Hero — maior valor liberado */}
+        {/* Hero — valor liberado único */}
         <div className="mt-7 rounded-2xl bg-gradient-brand p-6 shadow-brand">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-foreground/80">
             Valor Liberado
@@ -50,10 +50,10 @@ export const NovoEmprestimoCard = forwardRef<HTMLDivElement, { data: NovoEmprest
             className="mt-1 font-display font-extrabold leading-none text-brand-foreground tabular-nums"
             style={{ fontSize: 64, letterSpacing: "-0.04em" }}
           >
-            {brl(destaque.valorLiberado)}
+            {brl(valorLiberado)}
           </div>
           <div className="mt-2 text-sm font-medium text-brand-foreground/85">
-            Em até {destaque.prazo}x de {brl(destaque.parcela)}
+            Escolha o prazo que melhor se ajusta à sua parcela
           </div>
         </div>
       </div>
