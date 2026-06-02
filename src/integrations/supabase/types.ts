@@ -52,27 +52,33 @@ export type Database = {
       }
       commissions: {
         Row: {
+          carencia: number | null
           created_at: string
           id: string
+          modalidade: string
           owner_id: string
           percentual: number
-          taxa: number
+          taxa: number | null
           updated_at: string
         }
         Insert: {
+          carencia?: number | null
           created_at?: string
           id?: string
+          modalidade?: string
           owner_id: string
           percentual: number
-          taxa: number
+          taxa?: number | null
           updated_at?: string
         }
         Update: {
+          carencia?: number | null
           created_at?: string
           id?: string
+          modalidade?: string
           owner_id?: string
           percentual?: number
-          taxa?: number
+          taxa?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -100,26 +106,32 @@ export type Database = {
       }
       seller_commissions: {
         Row: {
+          carencia: number | null
           created_at: string
           id: string
+          modalidade: string
           percentual: number
-          taxa: number
+          taxa: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          carencia?: number | null
           created_at?: string
           id?: string
+          modalidade?: string
           percentual: number
-          taxa: number
+          taxa?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          carencia?: number | null
           created_at?: string
           id?: string
+          modalidade?: string
           percentual?: number
-          taxa?: number
+          taxa?: number | null
           updated_at?: string
           user_id?: string
         }
