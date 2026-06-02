@@ -86,7 +86,7 @@ export function NovoEmprestimo() {
   const handleSimular = () => {
     if (!cliente) return toast.error("Informe o nome do cliente.");
     if (parcelaN <= 0) return toast.error("Informe o valor da parcela.");
-    if (faltaCoef) return toast.error("Cadastre o coeficiente de 108x para Novo Empréstimo.");
+    if (faltaCoef) return toast.error("Cadastre o coeficiente de 108x para Novo LOAS.");
     setShowPreview(true);
     setTimeout(() => document.getElementById("ne-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
@@ -169,7 +169,7 @@ export function NovoEmprestimo() {
 
           {faltaCoef && (
             <div className="mt-4 rounded-xl border border-dashed border-amber/60 bg-amber/10 p-3 text-xs text-foreground">
-              Cadastre o coeficiente de <strong>108x</strong> em Novo Empréstimo. Os cenários de 54x e 36x são calculados pela lógica de antecipação (Ex1).
+              Cadastre o coeficiente de <strong>108x</strong> em Novo LOAS. Os cenários de 54x e 36x são calculados pela lógica de antecipação (Ex1).
             </div>
           )}
 
