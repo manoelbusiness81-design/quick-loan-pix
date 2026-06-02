@@ -12,43 +12,39 @@ import { NovoEmprestimoCard, type NovoEmprestimoOpcao } from "./novo-emprestimo-
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade?: string; }
 
-const TAXA_MENSAL = 0.02; // C1 na planilha Ex1
+const TAXA_MENSAL = 0.02;
 const toNum = (s: string) => parseFloat((s || "").replace(/\./g, "").replace(",", ".")) || 0;
 
-/**
- * Reproduz a lógica da aba Ex1 da planilha de referência.
- * - Valor Liberado: parcela / coef_108 (único — mesmo valor para todos os cenários).
- * - 108x: parcela informada.
- * - 36x: média mensal = (36·P + Σ pv(k), k=1..108) / 36  →  P + Σ/36  (bloco Ex1 linhas 59–94).
- * - 54x: média mensal = (54·P + Σ pv(k), k=55..108) / 40             (bloco Ex1 linhas 98–151, M98 = J152/40).
- *   onde pv(k) = P / (1 + 0,02)^k.
- */
-function calcularCenarios(parcela: number, coef108: number) {
+const CARENCIAS = [
+  { dias: 90, label: "90 dias" },
+  { dias: 60, label: "60 dias" },
+  { dias: 30, label: "30 dias" },
+  { dias: 0, label: "Sem carência" },
+] as const;
+
+/** Mesma lógica Ex1 do Novo LOAS: VL = P / coef; 36x = P + Σpv(1..108)/36; 54x = (54·P + Σpv(55..108))/40 */
+function calcularCenarios(parcela: number, coef: number) {
   const pv = (k: number) => parcela / Math.pow(1 + TAXA_MENSAL, k);
-  const valorLiberado = coef108 > 0 ? parcela / coef108 : 0;
-
-  let soma108 = 0;
-  for (let k = 1; k <= 108; k++) soma108 += pv(k);
-  const parcela36 = parcela + soma108 / 36;
-
-  let soma54 = 0;
-  for (let k = 55; k <= 108; k++) soma54 += pv(k);
-  const parcela54 = (54 * parcela + soma54) / 40;
-
+  const valorLiberado = coef > 0 ? parcela / coef : 0;
+  let s108 = 0; for (let k = 1; k <= 108; k++) s108 += pv(k);
+  const p36 = parcela + s108 / 36;
+  let s54 = 0; for (let k = 55; k <= 108; k++) s54 += pv(k);
+  const p54 = (54 * parcela + s54) / 40;
   return [
     { prazo: 108, parcela, valorLiberado },
-    { prazo: 54, parcela: parcela54, valorLiberado },
-    { prazo: 36, parcela: parcela36, valorLiberado },
+    { prazo: 54, parcela: p54, valorLiberado },
+    { prazo: 36, parcela: p36, valorLiberado },
   ] as NovoEmprestimoOpcao[];
 }
 
-export function NovoEmprestimo() {
+export function NovoNormal() {
   const { user, isAdmin } = useAuth();
   const cardRef = useRef<HTMLDivElement>(null);
   const [coefs, setCoefs] = useState<Coef[]>([]);
   const [cliente, setCliente] = useState("");
   const [telefone, setTelefone] = useState("");
   const [parcela, setParcela] = useState("");
+  const [carencia, setCarencia] = useState<number>(90);
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -56,24 +52,21 @@ export function NovoEmprestimo() {
     if (!user) return;
     (supabase.from("coefficients") as any)
       .select("*")
-      .eq("modalidade", "novo_emprestimo")
-      .eq("prazo", 108)
+      .eq("modalidade", "novo_normal")
       .then(({ data }: any) => setCoefs((data as Coef[]) ?? []));
   }, [user]);
 
   const parcelaN = toNum(parcela);
 
-  // Melhor coeficiente de 108x cadastrado (menor = maior valor liberado).
-  const coef108 = useMemo(() => {
-    const v = coefs.filter((c) => Number(c.coeficiente) > 0);
+  const coefAtual = useMemo(() => {
+    const v = coefs.filter((c) => Number(c.prazo) === carencia && Number(c.coeficiente) > 0);
     if (v.length === 0) return 0;
-    return v.reduce((a, b) => (Number(a.coeficiente) < Number(b.coeficiente) ? a : b)).coeficiente;
-  }, [coefs]);
+    return Number(v.reduce((a, b) => (Number(a.coeficiente) < Number(b.coeficiente) ? a : b)).coeficiente);
+  }, [coefs, carencia]);
 
-  const opcoes = useMemo(() => calcularCenarios(parcelaN, Number(coef108)), [parcelaN, coef108]);
-
+  const opcoes = useMemo(() => calcularCenarios(parcelaN, coefAtual), [parcelaN, coefAtual]);
   const valorLiberado = opcoes[0]?.valorLiberado ?? 0;
-  const faltaCoef = coef108 <= 0;
+  const faltaCoef = coefAtual <= 0;
   const canSimular = !!cliente && parcelaN > 0 && !faltaCoef;
 
   const generatePng = async (): Promise<Blob> => {
@@ -86,13 +79,13 @@ export function NovoEmprestimo() {
   const handleSimular = () => {
     if (!cliente) return toast.error("Informe o nome do cliente.");
     if (parcelaN <= 0) return toast.error("Informe o valor da parcela.");
-    if (faltaCoef) return toast.error("Cadastre o coeficiente de 108x para Novo LOAS.");
+    if (faltaCoef) return toast.error(`Cadastre o coeficiente da carência ${CARENCIAS.find(c=>c.dias===carencia)?.label} em Novo Normal.`);
     setShowPreview(true);
-    setTimeout(() => document.getElementById("ne-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(() => document.getElementById("nn-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const handleSend = async () => {
-    if (!canSimular) return toast.error("Preencha os dados e verifique o coeficiente de 108x.");
+    if (!canSimular) return toast.error("Preencha os dados e verifique o coeficiente.");
     const phone = onlyDigits(telefone);
     if (phone.length < 10) return toast.error("Informe um WhatsApp válido.");
     setSending(true);
@@ -115,9 +108,8 @@ export function NovoEmprestimo() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const valorFmt = brl(valorLiberado);
       const msg = encodeURIComponent(
-        `Simulação sem compromisso, com valor liberado de ${valorFmt}, e fazendo conosco você ganha 3 meses de carência.`
+        `Simulação sem compromisso, com valor liberado de ${brl(valorLiberado)}, e fazendo conosco você ganha 3 meses de carência.`
       );
       window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
     } catch (e) {
@@ -149,7 +141,6 @@ export function NovoEmprestimo() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {/* Form */}
       <div className="space-y-4">
         <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
           <h2 className="font-display text-lg font-bold text-foreground">Dados do cliente</h2>
@@ -167,9 +158,37 @@ export function NovoEmprestimo() {
             </Field>
           </div>
 
+          <div className="mt-4">
+            <Label className="text-xs font-semibold text-muted-foreground">Carência</Label>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {CARENCIAS.map((c) => {
+                const ativo = carencia === c.dias;
+                const cadastrado = coefs.some((x) => Number(x.prazo) === c.dias && Number(x.coeficiente) > 0);
+                return (
+                  <button
+                    key={c.dias}
+                    type="button"
+                    onClick={() => setCarencia(c.dias)}
+                    className={`rounded-xl border p-3 text-center transition ${
+                      ativo
+                        ? "border-brand bg-gradient-brand text-brand-foreground shadow-brand"
+                        : "border-border bg-card hover:border-brand/50"
+                    }`}
+                  >
+                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">Carência</div>
+                    <div className="font-display text-sm font-extrabold">{c.label}</div>
+                    {!cadastrado && !ativo && (
+                      <div className="mt-1 text-[9px] text-amber">sem coef.</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {faltaCoef && (
             <div className="mt-4 rounded-xl border border-dashed border-amber/60 bg-amber/10 p-3 text-xs text-foreground">
-              Cadastre o coeficiente de <strong>108x</strong> em Novo LOAS. Os cenários de 54x e 36x são calculados pela lógica de antecipação (Ex1).
+              Cadastre o coeficiente em <strong>Coeficientes → Novo Normal</strong> com prazo igual aos dias de carência ({carencia}).
             </div>
           )}
 
@@ -193,7 +212,7 @@ export function NovoEmprestimo() {
 
           {isAdmin && parcelaN > 0 && (
             <p className="mt-3 text-[10px] text-muted-foreground">
-              Cálculo (Ex1): VL = Parcela ÷ Coef108. Parcela 36x = P + Σ pv(1..108)/36. Parcela 54x = (54·P + Σ pv(55..108))/40. pv(k)=P/1,02ᵏ.
+              Cálculo: VL = Parcela ÷ Coef({carencia}d). Parcelas 54x e 36x via lógica Ex1 (mesma do Novo LOAS).
             </p>
           )}
 
@@ -203,8 +222,7 @@ export function NovoEmprestimo() {
         </div>
       </div>
 
-      {/* Preview */}
-      <div id="ne-preview" className="space-y-4">
+      <div id="nn-preview" className="space-y-4">
         <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
           <h2 className="font-display text-lg font-bold text-foreground">Pré-visualização</h2>
           <p className="mt-1 text-xs text-muted-foreground">É exatamente isso que o cliente vai receber.</p>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SimulationCard, type SimulationData, type ParcelaResumo } from "@/components/simulation-card";
 import { NovoEmprestimo } from "@/components/novo-emprestimo";
+import { NovoNormal } from "@/components/novo-normal";
 import { brl, formatPhoneBR, onlyDigits, pct } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -53,7 +54,7 @@ function SimulatorPage() {
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo">("refinanciamento");
+  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo" | "novo_normal">("refinanciamento");
 
   useEffect(() => {
     if (!user) return;
@@ -216,7 +217,11 @@ function SimulatorPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-            {modalidade === "refinanciamento" ? "Simulador de Refinanciamento" : "Simulador de Novo Empréstimo"}
+            {modalidade === "refinanciamento"
+              ? "Simulador de Refinanciamento"
+              : modalidade === "novo_emprestimo"
+              ? "Simulador de Novo LOAS"
+              : "Simulador de Novo Normal"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {modalidade === "refinanciamento"
@@ -230,10 +235,11 @@ function SimulatorPage() {
       </div>
 
       {/* Seletor de modalidade */}
-      <div className="inline-flex rounded-xl bg-secondary p-1">
+      <div className="inline-flex flex-wrap rounded-xl bg-secondary p-1">
         {([
           { v: "refinanciamento", label: "Refinanciamento" },
-          { v: "novo_emprestimo", label: "Novo Empréstimo" },
+          { v: "novo_emprestimo", label: "Novo LOAS" },
+          { v: "novo_normal", label: "Novo Normal" },
         ] as const).map((m) => (
           <button
             key={m.v}
@@ -248,6 +254,7 @@ function SimulatorPage() {
       </div>
 
       {modalidade === "novo_emprestimo" ? <NovoEmprestimo /> : null}
+      {modalidade === "novo_normal" ? <NovoNormal /> : null}
       {modalidade === "refinanciamento" && (
 
       <div className="grid gap-6 lg:grid-cols-2">
