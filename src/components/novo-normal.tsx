@@ -211,6 +211,8 @@ export function NovoNormal() {
             </>
           )}
 
+          <CommissionPanel modalidade="novo_normal" carencia={carencia} valorBruto={valorLiberado} />
+
           {isAdmin && parcelaN > 0 && (
             <p className="mt-3 text-[10px] text-muted-foreground">
               Cálculo: VL = Parcela ÷ Coef({carencia}d). Parcelas 54x e 36x via lógica Ex1 (mesma do Novo LOAS).
