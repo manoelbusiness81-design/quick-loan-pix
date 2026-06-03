@@ -192,6 +192,8 @@ export function NovoEmprestimo() {
             </>
           )}
 
+          <CommissionPanel modalidade="novo_emprestimo" valorBruto={valorLiberado} />
+
           {isAdmin && parcelaN > 0 && (
             <p className="mt-3 text-[10px] text-muted-foreground">
               Cálculo (Ex1): VL = Parcela ÷ Coef108. Parcela 36x = P + Σ pv(1..108)/36. Parcela 54x = (54·P + Σ pv(55..108))/40. pv(k)=P/1,02ᵏ.
