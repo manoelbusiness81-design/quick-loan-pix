@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { brl, formatPhoneBR, onlyDigits } from "@/lib/format";
 import { toast } from "sonner";
 import { NovoEmprestimoCard, type NovoEmprestimoOpcao } from "./novo-emprestimo-card";
+import { CommissionPanel } from "./commission-panel";
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade?: string; }
 
@@ -209,6 +210,8 @@ export function NovoNormal() {
               </div>
             </>
           )}
+
+          <CommissionPanel modalidade="novo_normal" carencia={carencia} valorBruto={valorLiberado} />
 
           {isAdmin && parcelaN > 0 && (
             <p className="mt-3 text-[10px] text-muted-foreground">
