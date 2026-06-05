@@ -1,5 +1,5 @@
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
-import { Calculator, ListTree, Percent, Users, LogOut, Menu, X } from "lucide-react";
+import { Calculator, ListTree, Percent, Users, LogOut, Menu, X, Settings } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,7 +23,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.navigate({ to: "/login" });
   };
 
-  const items = [...navItems, ...(isAdmin ? [{ to: "/admin", label: "Usuários", icon: Users }] : [])];
+  const items = [
+    ...navItems,
+    ...(isAdmin
+      ? [
+          { to: "/configuracoes", label: "Configurações", icon: Settings },
+          { to: "/admin", label: "Usuários", icon: Users },
+        ]
+      : []),
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-surface">
