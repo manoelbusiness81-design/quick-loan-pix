@@ -109,9 +109,8 @@ export function NovoNormal() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const msg = encodeURIComponent(
-        `Simulação sem compromisso, com valor liberado de ${brl(valorLiberado)}, e fazendo conosco você ganha 3 meses de carência.`
-      );
+      const template = await fetchWhatsappTemplate();
+      const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado));
       window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
     } catch (e) {
       console.error(e);
