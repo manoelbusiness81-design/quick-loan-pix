@@ -158,6 +158,51 @@ export type Database = {
         }
         Relationships: []
       }
+      simulations: {
+        Row: {
+          carencia: number | null
+          cliente: string
+          created_at: string
+          id: string
+          modalidade: string
+          parcela: number | null
+          prazo: number | null
+          reactivated_at: string | null
+          sent_at: string
+          telefone: string
+          user_id: string
+          valor_liberado: number
+        }
+        Insert: {
+          carencia?: number | null
+          cliente: string
+          created_at?: string
+          id?: string
+          modalidade: string
+          parcela?: number | null
+          prazo?: number | null
+          reactivated_at?: string | null
+          sent_at?: string
+          telefone: string
+          user_id: string
+          valor_liberado?: number
+        }
+        Update: {
+          carencia?: number | null
+          cliente?: string
+          created_at?: string
+          id?: string
+          modalidade?: string
+          parcela?: number | null
+          prazo?: number | null
+          reactivated_at?: string | null
+          sent_at?: string
+          telefone?: string
+          user_id?: string
+          valor_liberado?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
