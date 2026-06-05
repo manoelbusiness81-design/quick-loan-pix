@@ -1,13 +1,15 @@
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
-import { Calculator, ListTree, Percent, Users, LogOut, Menu, X, Settings } from "lucide-react";
+import { Calculator, ListTree, Percent, Users, LogOut, Menu, X, Settings, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import logoDrs from "@/assets/logo-drs.jpg";
+import { SimulationsCounter } from "./simulations-counter";
 
 const navItems = [
   { to: "/", label: "Simulador", icon: Calculator },
+  { to: "/reativacao", label: "Reativação", icon: MessageCircle },
   { to: "/coeficientes", label: "Coeficientes", icon: ListTree },
   { to: "/comissoes", label: "Comissões", icon: Percent },
 ];
@@ -67,6 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
+            <SimulationsCounter />
             <div className="text-right leading-tight">
               <div className="text-xs font-medium text-foreground">{user?.user_metadata?.full_name || user?.email}</div>
               {isAdmin && <div className="text-[10px] font-semibold uppercase tracking-wider text-octa">Admin</div>}
