@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, MessageSquare, Save } from "lucide-react";
+import { Loader2, MessageSquare, Save, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,11 @@ import {
   DEFAULT_WHATSAPP_MESSAGE,
   renderWhatsappMessage,
 } from "@/lib/whatsapp";
+import {
+  REACTIVATION_MESSAGE_KEY,
+  DEFAULT_REACTIVATION_MESSAGE,
+  renderReactivationMessage,
+} from "@/lib/simulations";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   beforeLoad: async () => {
@@ -33,15 +38,18 @@ function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string>(DEFAULT_WHATSAPP_MESSAGE);
+  const [reactMsg, setReactMsg] = useState<string>(DEFAULT_REACTIVATION_MESSAGE);
+  const [savingReact, setSavingReact] = useState(false);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await (supabase.from("app_settings") as any)
-        .select("value")
-        .eq("key", WHATSAPP_MESSAGE_KEY)
-        .maybeSingle();
-      setMessage((data?.value as string) || DEFAULT_WHATSAPP_MESSAGE);
+      const [{ data: wa }, { data: rx }] = await Promise.all([
+        (supabase.from("app_settings") as any).select("value").eq("key", WHATSAPP_MESSAGE_KEY).maybeSingle(),
+        (supabase.from("app_settings") as any).select("value").eq("key", REACTIVATION_MESSAGE_KEY).maybeSingle(),
+      ]);
+      setMessage((wa?.value as string) || DEFAULT_WHATSAPP_MESSAGE);
+      setReactMsg((rx?.value as string) || DEFAULT_REACTIVATION_MESSAGE);
       setLoading(false);
     })();
   }, []);
@@ -67,6 +75,29 @@ function ConfiguracoesPage() {
       return;
     }
     toast.success("Mensagem salva com sucesso");
+  };
+
+  const saveReact = async () => {
+    if (!reactMsg.trim()) {
+      toast.error("A mensagem de reativação não pode ficar em branco.");
+      return;
+    }
+    setSavingReact(true);
+    const { error } = await (supabase.from("app_settings") as any).upsert(
+      {
+        key: REACTIVATION_MESSAGE_KEY,
+        value: reactMsg,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id ?? null,
+      },
+      { onConflict: "key" }
+    );
+    setSavingReact(false);
+    if (error) {
+      toast.error("Erro ao salvar", { description: error.message });
+      return;
+    }
+    toast.success("Mensagem de reativação salva");
   };
 
   const preview = renderWhatsappMessage(message, 8542.33);
