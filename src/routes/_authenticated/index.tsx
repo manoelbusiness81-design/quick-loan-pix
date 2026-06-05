@@ -26,6 +26,7 @@ interface ParcelaInput { id: string; parcela: string; prazoRestante: string; tax
 
 const MAX_PARCELAS = 5;
 import { fetchWhatsappTemplate, renderWhatsappMessage } from "@/lib/whatsapp";
+import { recordSimulation } from "@/lib/simulations";
 
 const toNum = (s: string) => parseFloat((s || "").replace(/\./g, "").replace(",", ".")) || 0;
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -179,6 +180,13 @@ function SimulatorPage() {
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
       const template = await fetchWhatsappTemplate();
       const msg = encodeURIComponent(renderWhatsappMessage(template, totalTroco));
+      await recordSimulation({
+        cliente,
+        telefone: phone,
+        modalidade: "refinanciamento",
+        valor_liberado: totalTroco,
+        prazo: coefSelecionado ? Number(coefSelecionado.prazo) : null,
+      });
       window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
     } catch (e) {
       console.error(e);
