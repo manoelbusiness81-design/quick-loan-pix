@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedReativacaoRouteImport } from './routes/_authenticated/reativacao'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
 import { Route as AuthenticatedCoeficientesRouteImport } from './routes/_authenticated/coeficientes'
@@ -29,6 +30,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReativacaoRoute = AuthenticatedReativacaoRouteImport.update({
+  id: '/reativacao',
+  path: '/reativacao',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedConfiguracoesRoute =
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/coeficientes': typeof AuthenticatedCoeficientesRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/reativacao': typeof AuthenticatedReativacaoRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/coeficientes': typeof AuthenticatedCoeficientesRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/reativacao': typeof AuthenticatedReativacaoRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/_authenticated/coeficientes': typeof AuthenticatedCoeficientesRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/reativacao': typeof AuthenticatedReativacaoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/coeficientes'
     | '/comissoes'
     | '/configuracoes'
+    | '/reativacao'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/coeficientes'
     | '/comissoes'
     | '/configuracoes'
+    | '/reativacao'
     | '/'
   id:
     | '__root__'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/_authenticated/coeficientes'
     | '/_authenticated/comissoes'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/reativacao'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
@@ -134,6 +146,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reativacao': {
+      id: '/_authenticated/reativacao'
+      path: '/reativacao'
+      fullPath: '/reativacao'
+      preLoaderRoute: typeof AuthenticatedReativacaoRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/configuracoes': {
@@ -172,6 +191,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCoeficientesRoute: typeof AuthenticatedCoeficientesRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedReativacaoRoute: typeof AuthenticatedReativacaoRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -180,6 +200,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCoeficientesRoute: AuthenticatedCoeficientesRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedReativacaoRoute: AuthenticatedReativacaoRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 

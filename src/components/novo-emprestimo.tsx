@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { NovoEmprestimoCard, type NovoEmprestimoOpcao } from "./novo-emprestimo-card";
 import { CommissionPanel } from "./commission-panel";
 import { fetchWhatsappTemplate, renderWhatsappMessage } from "@/lib/whatsapp";
+import { recordSimulation } from "@/lib/simulations";
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade?: string; }
 
@@ -119,6 +120,14 @@ export function NovoEmprestimo() {
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
       const template = await fetchWhatsappTemplate();
       const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado));
+      await recordSimulation({
+        cliente,
+        telefone: phone,
+        modalidade: "novo_emprestimo",
+        valor_liberado: valorLiberado,
+        parcela: parcelaN,
+        prazo: 108,
+      });
       window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
     } catch (e) {
       console.error(e);
