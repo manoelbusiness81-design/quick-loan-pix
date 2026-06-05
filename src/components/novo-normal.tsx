@@ -10,6 +10,7 @@ import { brl, formatPhoneBR, onlyDigits } from "@/lib/format";
 import { toast } from "sonner";
 import { NovoEmprestimoCard, type NovoEmprestimoOpcao } from "./novo-emprestimo-card";
 import { CommissionPanel } from "./commission-panel";
+import { fetchWhatsappTemplate, renderWhatsappMessage } from "@/lib/whatsapp";
 
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade?: string; }
 
@@ -109,9 +110,8 @@ export function NovoNormal() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const msg = encodeURIComponent(
-        `Simulação sem compromisso, com valor liberado de ${brl(valorLiberado)}, e fazendo conosco você ganha 3 meses de carência.`
-      );
+      const template = await fetchWhatsappTemplate();
+      const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado));
       window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
     } catch (e) {
       console.error(e);

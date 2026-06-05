@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
 import { Route as AuthenticatedCoeficientesRouteImport } from './routes/_authenticated/coeficientes'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -30,6 +31,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedComissoesRoute = AuthenticatedComissoesRouteImport.update({
   id: '/comissoes',
   path: '/comissoes',
@@ -53,12 +60,14 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/coeficientes': typeof AuthenticatedCoeficientesRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/coeficientes': typeof AuthenticatedCoeficientesRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
@@ -68,13 +77,26 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/coeficientes': typeof AuthenticatedCoeficientesRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/admin' | '/coeficientes' | '/comissoes'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/admin'
+    | '/coeficientes'
+    | '/comissoes'
+    | '/configuracoes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/admin' | '/coeficientes' | '/comissoes' | '/'
+  to:
+    | '/login'
+    | '/admin'
+    | '/coeficientes'
+    | '/comissoes'
+    | '/configuracoes'
+    | '/'
   id:
     | '__root__'
     | '/_authenticated'
@@ -82,6 +104,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/coeficientes'
     | '/_authenticated/comissoes'
+    | '/_authenticated/configuracoes'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
@@ -113,6 +136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/comissoes': {
       id: '/_authenticated/comissoes'
       path: '/comissoes'
@@ -141,6 +171,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedCoeficientesRoute: typeof AuthenticatedCoeficientesRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -148,6 +179,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedCoeficientesRoute: AuthenticatedCoeficientesRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 

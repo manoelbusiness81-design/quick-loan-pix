@@ -25,7 +25,7 @@ interface SellerComm { id: string; user_id: string; taxa: number; percentual: nu
 interface ParcelaInput { id: string; parcela: string; prazoRestante: string; taxaAtual: string; }
 
 const MAX_PARCELAS = 5;
-const WA_MESSAGE = "Opa, aqui é o Manoel conversamos por ligação";
+import { fetchWhatsappTemplate, renderWhatsappMessage } from "@/lib/whatsapp";
 
 const toNum = (s: string) => parseFloat((s || "").replace(/\./g, "").replace(",", ".")) || 0;
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -177,7 +177,8 @@ function SimulatorPage() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const msg = encodeURIComponent(WA_MESSAGE);
+      const template = await fetchWhatsappTemplate();
+      const msg = encodeURIComponent(renderWhatsappMessage(template, totalTroco));
       window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
     } catch (e) {
       console.error(e);
