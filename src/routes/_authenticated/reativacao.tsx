@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Send, MessageCircle, RefreshCw } from "lucide-react";
+import { Loader2, Send, MessageCircle, RefreshCw, Download, Chrome, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -169,6 +169,64 @@ function ReativacaoPage() {
     }
   };
 
+  const exportarParaExtensao = async () => {
+    if (selectedRows.length === 0) {
+      toast.error("Selecione ao menos um cliente.");
+      return;
+    }
+    const tpl = template || (await fetchReactivationTemplate());
+    const payload = selectedRows
+      .map((r) => {
+        const phone = onlyDigits(r.telefone);
+        if (phone.length < 10) return null;
+        const ddi = phone.length <= 11 ? `55${phone}` : phone;
+        return {
+          nome: r.cliente,
+          telefone: ddi,
+          mensagem: renderReactivationMessage(tpl, {
+            nome: r.cliente,
+            valorLiberado: Number(r.valor_liberado),
+          }),
+        };
+      })
+      .filter(Boolean);
+    const json = JSON.stringify(payload, null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+      toast.success(`${payload.length} cliente(s) copiados`, {
+        description: "Abra a extensão OCTA no WhatsApp Web e clique em 'Colar área de transferência'.",
+      });
+    } catch {
+      // Fallback: download as file
+      const blob = new Blob([json], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `octa-disparo-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success("JSON baixado", { description: "Importe na extensão OCTA." });
+    }
+  };
+
+  const baixarExtensao = () => {
+    fetch("/octa-whatsapp-sender.zip")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Download falhou: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "octa-whatsapp-sender.zip";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast.success("Extensão baixada", {
+          description: "Descompacte e instale em chrome://extensions (modo desenvolvedor).",
+        });
+      })
+      .catch((err) => toast.error("Erro ao baixar", { description: err.message }));
+  };
+
   const fmtDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -202,6 +260,36 @@ function ReativacaoPage() {
         <Stat label="Enviadas hoje" value={today} />
         <Stat label="Enviadas no mês" value={month} />
         <Stat label="Clientes reativáveis" value={totalReativaveis} accent />
+      </div>
+
+      {/* Extensão Chrome */}
+      <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-soft md:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Chrome className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-lg font-bold text-foreground">
+                Disparo automático via Extensão Chrome
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Selecione os clientes, clique em <b>Exportar para Extensão</b>, abra o WhatsApp
+                Web e use a extensão OCTA para enviar mensagens personalizadas com intervalo
+                aleatório de 20 a 50 segundos.
+              </p>
+              <ol className="mt-2 list-inside list-decimal space-y-0.5 text-xs text-muted-foreground">
+                <li>Baixe e descompacte o arquivo abaixo</li>
+                <li>Acesse <code className="rounded bg-secondary px-1">chrome://extensions</code> e ative o "Modo do desenvolvedor"</li>
+                <li>Clique em "Carregar sem compactação" e selecione a pasta</li>
+                <li>Faça login em <code className="rounded bg-secondary px-1">web.whatsapp.com</code></li>
+              </ol>
+            </div>
+          </div>
+          <Button onClick={baixarExtensao} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" /> Baixar Extensão
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -242,9 +330,18 @@ function ReativacaoPage() {
           <h2 className="font-display text-lg font-bold text-foreground">
             Clientes do período <span className="text-muted-foreground">({rows.length})</span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={toggleAll} disabled={rows.length === 0}>
               {allSelected ? "Desmarcar todos" : "Selecionar todos"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportarParaExtensao}
+              disabled={selectedRows.length === 0}
+              className="gap-2"
+            >
+              <Copy className="h-4 w-4" /> Exportar para Extensão ({selectedRows.length})
             </Button>
             <Button
               onClick={enviarReativacao}
