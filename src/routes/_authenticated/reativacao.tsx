@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Send, MessageCircle, RefreshCw } from "lucide-react";
+import { Loader2, Send, MessageCircle, RefreshCw, Download, Chrome, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -169,6 +169,64 @@ function ReativacaoPage() {
     }
   };
 
+  const exportarParaExtensao = async () => {
+    if (selectedRows.length === 0) {
+      toast.error("Selecione ao menos um cliente.");
+      return;
+    }
+    const tpl = template || (await fetchReactivationTemplate());
+    const payload = selectedRows
+      .map((r) => {
+        const phone = onlyDigits(r.telefone);
+        if (phone.length < 10) return null;
+        const ddi = phone.length <= 11 ? `55${phone}` : phone;
+        return {
+          nome: r.cliente,
+          telefone: ddi,
+          mensagem: renderReactivationMessage(tpl, {
+            nome: r.cliente,
+            valorLiberado: Number(r.valor_liberado),
+          }),
+        };
+      })
+      .filter(Boolean);
+    const json = JSON.stringify(payload, null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+      toast.success(`${payload.length} cliente(s) copiados`, {
+        description: "Abra a extensão OCTA no WhatsApp Web e clique em 'Colar área de transferência'.",
+      });
+    } catch {
+      // Fallback: download as file
+      const blob = new Blob([json], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `octa-disparo-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success("JSON baixado", { description: "Importe na extensão OCTA." });
+    }
+  };
+
+  const baixarExtensao = () => {
+    fetch("/octa-whatsapp-sender.zip")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Download falhou: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "octa-whatsapp-sender.zip";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast.success("Extensão baixada", {
+          description: "Descompacte e instale em chrome://extensions (modo desenvolvedor).",
+        });
+      })
+      .catch((err) => toast.error("Erro ao baixar", { description: err.message }));
+  };
+
   const fmtDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -242,9 +300,18 @@ function ReativacaoPage() {
           <h2 className="font-display text-lg font-bold text-foreground">
             Clientes do período <span className="text-muted-foreground">({rows.length})</span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={toggleAll} disabled={rows.length === 0}>
               {allSelected ? "Desmarcar todos" : "Selecionar todos"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportarParaExtensao}
+              disabled={selectedRows.length === 0}
+              className="gap-2"
+            >
+              <Copy className="h-4 w-4" /> Exportar para Extensão ({selectedRows.length})
             </Button>
             <Button
               onClick={enviarReativacao}
