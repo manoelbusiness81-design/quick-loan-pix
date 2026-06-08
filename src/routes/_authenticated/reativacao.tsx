@@ -262,6 +262,36 @@ function ReativacaoPage() {
         <Stat label="Clientes reativáveis" value={totalReativaveis} accent />
       </div>
 
+      {/* Extensão Chrome */}
+      <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-soft md:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Chrome className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-lg font-bold text-foreground">
+                Disparo automático via Extensão Chrome
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Selecione os clientes, clique em <b>Exportar para Extensão</b>, abra o WhatsApp
+                Web e use a extensão OCTA para enviar mensagens personalizadas com intervalo
+                aleatório de 20 a 50 segundos.
+              </p>
+              <ol className="mt-2 list-inside list-decimal space-y-0.5 text-xs text-muted-foreground">
+                <li>Baixe e descompacte o arquivo abaixo</li>
+                <li>Acesse <code className="rounded bg-secondary px-1">chrome://extensions</code> e ative o "Modo do desenvolvedor"</li>
+                <li>Clique em "Carregar sem compactação" e selecione a pasta</li>
+                <li>Faça login em <code className="rounded bg-secondary px-1">web.whatsapp.com</code></li>
+              </ol>
+            </div>
+          </div>
+          <Button onClick={baixarExtensao} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" /> Baixar Extensão
+          </Button>
+        </div>
+      </div>
+
       {/* Filtros */}
       <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
         <h2 className="font-display text-lg font-bold text-foreground">Filtros</h2>
