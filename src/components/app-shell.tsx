@@ -27,12 +27,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const items = [
     ...navItems,
-    ...(isAdmin
-      ? [
-          { to: "/configuracoes", label: "Configurações", icon: Settings },
-          { to: "/admin", label: "Usuários", icon: Users },
-        ]
-      : []),
+    { to: "/configuracoes", label: "Configurações", icon: Settings },
+    ...(isAdmin ? [{ to: "/admin", label: "Usuários", icon: Users }] : []),
   ];
 
   return (

@@ -62,6 +62,16 @@ export const MODALIDADE_LABEL: Record<string, string> = {
 
 export async function fetchReactivationTemplate(): Promise<string> {
   try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (uid) {
+      const { data: own } = await (supabase.from("user_settings") as any)
+        .select("value")
+        .eq("user_id", uid)
+        .eq("key", REACTIVATION_MESSAGE_KEY)
+        .maybeSingle();
+      if (own?.value) return own.value as string;
+    }
     const { data } = await (supabase.from("app_settings") as any)
       .select("value")
       .eq("key", REACTIVATION_MESSAGE_KEY)
