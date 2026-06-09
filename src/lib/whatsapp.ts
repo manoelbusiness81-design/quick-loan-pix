@@ -19,9 +19,19 @@ export function renderWhatsappMessage(template: string, valorLiberado: number): 
   return (template ?? "").replace(/\{VALOR_LIBERADO\}/gi, valor);
 }
 
-/** Busca a mensagem padrão configurada. Faz fallback para o default em caso de erro. */
+/** Busca a mensagem do usuário atual; fallback: padrão global (app_settings) e depois o default. */
 export async function fetchWhatsappTemplate(): Promise<string> {
   try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (uid) {
+      const { data: own } = await (supabase.from("user_settings") as any)
+        .select("value")
+        .eq("user_id", uid)
+        .eq("key", WHATSAPP_MESSAGE_KEY)
+        .maybeSingle();
+      if (own?.value) return own.value as string;
+    }
     const { data } = await (supabase.from("app_settings") as any)
       .select("value")
       .eq("key", WHATSAPP_MESSAGE_KEY)
