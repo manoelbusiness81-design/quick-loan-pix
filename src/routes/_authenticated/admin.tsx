@@ -78,6 +78,13 @@ function AdminPage() {
     catch (e: any) { toast.error(e.message); }
   };
 
+  const toggleActive = async (u: AdminUser) => {
+    const action = u.active ? "Desativar" : "Reativar";
+    if (!confirm(`${action} ${u.email}? Os dados serão preservados.`)) return;
+    try { await fnActive({ data: { user_id: u.id, active: !u.active } }); toast.success(`${action.replace("ar", "ado")}`); load(); }
+    catch (e: any) { toast.error(e.message); }
+  };
+
   const savePwd = async () => {
     if (!pwdFor || newPwd.length < 8) { toast.error("Senha mínima 8 caracteres."); return; }
     try { await fnPwd({ data: { user_id: pwdFor.id, password: newPwd } }); toast.success("Senha alterada"); setPwdFor(null); setNewPwd(""); }
