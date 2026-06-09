@@ -110,23 +110,47 @@ function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <tr><th className="px-5 py-3 text-left">Nome</th><th className="px-5 py-3 text-left">E-mail</th><th className="px-5 py-3 text-left">Admin</th><th className="px-5 py-3 text-right">Ações</th></tr>
+                <tr>
+                  <th className="px-5 py-3 text-left">Nome</th>
+                  <th className="px-5 py-3 text-left">E-mail</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-left">Admin</th>
+                  <th className="px-5 py-3 text-right">Ações</th>
+                </tr>
               </thead>
               <tbody>
                 {users.map((u) => {
                   const isAdmin = u.roles.includes("admin");
                   const isMe = u.id === me?.id;
                   return (
-                    <tr key={u.id} className="border-b border-border/60 last:border-0">
+                    <tr key={u.id} className={`border-b border-border/60 last:border-0 ${!u.active ? "opacity-60" : ""}`}>
                       <td className="px-5 py-3 font-medium text-foreground">{u.full_name || "—"} {isMe && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}</td>
                       <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
                       <td className="px-5 py-3">
-                        <Switch checked={isAdmin} disabled={isMe && isAdmin} onCheckedChange={(v) => toggleAdmin(u, v)} />
+                        {u.active ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Ativo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400">
+                            <span className="h-2 w-2 rounded-full bg-red-500" /> Inativo
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <Switch checked={isAdmin} disabled={(isMe && isAdmin) || !u.active} onCheckedChange={(v) => toggleAdmin(u, v)} />
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="inline-flex gap-1">
+                          {!isMe && (
+                            u.active ? (
+                              <Button size="icon" variant="ghost" onClick={() => toggleActive(u)} title="Desativar usuário" className="text-red-600 hover:text-red-600"><UserX className="h-4 w-4" /></Button>
+                            ) : (
+                              <Button size="icon" variant="ghost" onClick={() => toggleActive(u)} title="Reativar usuário" className="text-emerald-600 hover:text-emerald-600"><UserCheck className="h-4 w-4" /></Button>
+                            )
+                          )}
                           <Button size="icon" variant="ghost" onClick={() => { setPwdFor(u); setNewPwd(""); }} title="Alterar senha"><Key className="h-4 w-4" /></Button>
-                          {!isMe && <Button size="icon" variant="ghost" onClick={() => del(u)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
+                          {!isMe && <Button size="icon" variant="ghost" onClick={() => del(u)} title="Excluir permanentemente" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
                         </div>
                       </td>
                     </tr>
