@@ -101,3 +101,20 @@ export const setUserAdmin = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const setUserActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ user_id: z.string().uuid(), active: z.boolean() }).parse(input)
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.userId);
+    if (!data.active && data.user_id === context.userId) {
+      throw new Error("Você não pode desativar sua própria conta.");
+    }
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: data.active ? "none" : "876000h",
+    } as any);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
