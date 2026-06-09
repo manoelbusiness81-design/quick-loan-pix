@@ -23,13 +23,19 @@ export const listUsers = createServerFn({ method: "GET" })
     const ids = users.users.map((u) => u.id);
     const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids);
     const { data: profiles } = await supabaseAdmin.from("profiles").select("id, full_name").in("id", ids);
-    return users.users.map((u) => ({
-      id: u.id,
-      email: u.email ?? "",
-      created_at: u.created_at,
-      full_name: profiles?.find((p) => p.id === u.id)?.full_name ?? null,
-      roles: (roles ?? []).filter((r) => r.user_id === u.id).map((r) => r.role as string),
-    }));
+    const now = Date.now();
+    return users.users.map((u) => {
+      const bannedUntil = (u as any).banned_until as string | null | undefined;
+      const banned = !!bannedUntil && new Date(bannedUntil).getTime() > now;
+      return {
+        id: u.id,
+        email: u.email ?? "",
+        created_at: u.created_at,
+        full_name: profiles?.find((p) => p.id === u.id)?.full_name ?? null,
+        roles: (roles ?? []).filter((r) => r.user_id === u.id).map((r) => r.role as string),
+        active: !banned,
+      };
+    });
   });
 
 export const createUser = createServerFn({ method: "POST" })
