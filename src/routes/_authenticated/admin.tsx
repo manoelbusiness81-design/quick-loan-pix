@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { listUsers, createUser, deleteUser, setUserPassword, setUserAdmin } from "@/lib/admin.functions";
+import { listUsers, createUser, deleteUser, setUserPassword, setUserAdmin, setUserActive } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
