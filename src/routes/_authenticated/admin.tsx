@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-interface AdminUser { id: string; email: string; full_name: string | null; roles: string[]; created_at: string; }
+interface AdminUser { id: string; email: string; full_name: string | null; roles: string[]; created_at: string; active: boolean; }
 
 function AdminPage() {
   const { user: me } = useAuth();
@@ -36,6 +36,7 @@ function AdminPage() {
   const fnDelete = useServerFn(deleteUser);
   const fnPwd = useServerFn(setUserPassword);
   const fnAdmin = useServerFn(setUserAdmin);
+  const fnActive = useServerFn(setUserActive);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
