@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, Loader2, Key, ShieldCheck, ShieldOff } from "lucide-react";
+import { Plus, Trash2, Loader2, Key, ShieldCheck, ShieldOff, UserCheck, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { listUsers, createUser, deleteUser, setUserPassword, setUserAdmin } from "@/lib/admin.functions";
+import { listUsers, createUser, deleteUser, setUserPassword, setUserAdmin, setUserActive } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-interface AdminUser { id: string; email: string; full_name: string | null; roles: string[]; created_at: string; }
+interface AdminUser { id: string; email: string; full_name: string | null; roles: string[]; created_at: string; active: boolean; }
 
 function AdminPage() {
   const { user: me } = useAuth();
@@ -36,6 +36,7 @@ function AdminPage() {
   const fnDelete = useServerFn(deleteUser);
   const fnPwd = useServerFn(setUserPassword);
   const fnAdmin = useServerFn(setUserAdmin);
+  const fnActive = useServerFn(setUserActive);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +78,13 @@ function AdminPage() {
     catch (e: any) { toast.error(e.message); }
   };
 
+  const toggleActive = async (u: AdminUser) => {
+    const action = u.active ? "Desativar" : "Reativar";
+    if (!confirm(`${action} ${u.email}? Os dados serão preservados.`)) return;
+    try { await fnActive({ data: { user_id: u.id, active: !u.active } }); toast.success(`${action.replace("ar", "ado")}`); load(); }
+    catch (e: any) { toast.error(e.message); }
+  };
+
   const savePwd = async () => {
     if (!pwdFor || newPwd.length < 8) { toast.error("Senha mínima 8 caracteres."); return; }
     try { await fnPwd({ data: { user_id: pwdFor.id, password: newPwd } }); toast.success("Senha alterada"); setPwdFor(null); setNewPwd(""); }
@@ -102,23 +110,47 @@ function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <tr><th className="px-5 py-3 text-left">Nome</th><th className="px-5 py-3 text-left">E-mail</th><th className="px-5 py-3 text-left">Admin</th><th className="px-5 py-3 text-right">Ações</th></tr>
+                <tr>
+                  <th className="px-5 py-3 text-left">Nome</th>
+                  <th className="px-5 py-3 text-left">E-mail</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-left">Admin</th>
+                  <th className="px-5 py-3 text-right">Ações</th>
+                </tr>
               </thead>
               <tbody>
                 {users.map((u) => {
                   const isAdmin = u.roles.includes("admin");
                   const isMe = u.id === me?.id;
                   return (
-                    <tr key={u.id} className="border-b border-border/60 last:border-0">
+                    <tr key={u.id} className={`border-b border-border/60 last:border-0 ${!u.active ? "opacity-60" : ""}`}>
                       <td className="px-5 py-3 font-medium text-foreground">{u.full_name || "—"} {isMe && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}</td>
                       <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
                       <td className="px-5 py-3">
-                        <Switch checked={isAdmin} disabled={isMe && isAdmin} onCheckedChange={(v) => toggleAdmin(u, v)} />
+                        {u.active ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Ativo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400">
+                            <span className="h-2 w-2 rounded-full bg-red-500" /> Inativo
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <Switch checked={isAdmin} disabled={(isMe && isAdmin) || !u.active} onCheckedChange={(v) => toggleAdmin(u, v)} />
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="inline-flex gap-1">
+                          {!isMe && (
+                            u.active ? (
+                              <Button size="icon" variant="ghost" onClick={() => toggleActive(u)} title="Desativar usuário" className="text-red-600 hover:text-red-600"><UserX className="h-4 w-4" /></Button>
+                            ) : (
+                              <Button size="icon" variant="ghost" onClick={() => toggleActive(u)} title="Reativar usuário" className="text-emerald-600 hover:text-emerald-600"><UserCheck className="h-4 w-4" /></Button>
+                            )
+                          )}
                           <Button size="icon" variant="ghost" onClick={() => { setPwdFor(u); setNewPwd(""); }} title="Alterar senha"><Key className="h-4 w-4" /></Button>
-                          {!isMe && <Button size="icon" variant="ghost" onClick={() => del(u)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
+                          {!isMe && <Button size="icon" variant="ghost" onClick={() => del(u)} title="Excluir permanentemente" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
                         </div>
                       </td>
                     </tr>
