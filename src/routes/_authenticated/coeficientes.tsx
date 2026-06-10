@@ -25,7 +25,8 @@ const MOD_LABEL: Record<Modalidade, string> = {
 };
 
 function CoefficientsPage() {
-  const { user } = useAuth();
+  const { user, isMasterAdmin, isSupervisor, teamId } = useAuth();
+  const canEdit = isMasterAdmin || isSupervisor;
   const [filter, setFilter] = useState<Modalidade>("refinanciamento");
   const [list, setList] = useState<Coef[]>([]);
   const [open, setOpen] = useState(false);
@@ -71,6 +72,8 @@ function CoefficientsPage() {
       coeficiente: parseFloat(form.coeficiente.replace(",", ".")),
       modalidade: form.modalidade,
       owner_id: user.id,
+      // Master Admin saves as global (NULL); supervisor saves under their team.
+      team_id: isMasterAdmin ? null : (teamId ?? null),
     };
     const { error } = editing
       ? await (supabase.from("coefficients") as any).update(payload).eq("id", editing.id)
@@ -95,9 +98,11 @@ function CoefficientsPage() {
           <h1 className="font-display text-2xl font-bold text-foreground md:text-3xl">Coeficientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">Cadastre tabelas por modalidade, banco, prazo e taxa.</p>
         </div>
-        <Button onClick={openNew} className="h-11 bg-gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
-          <Plus className="mr-2 h-4 w-4" /> Novo coeficiente
-        </Button>
+        {canEdit && (
+          <Button onClick={openNew} className="h-11 bg-gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
+            <Plus className="mr-2 h-4 w-4" /> Novo coeficiente
+          </Button>
+        )}
       </div>
 
       {/* Tabs modalidade */}
@@ -140,10 +145,12 @@ function CoefficientsPage() {
                     <td className="px-5 py-3 tabular-nums">{pct(Number(c.taxa))}</td>
                     <td className="px-5 py-3 font-display font-semibold tabular-nums text-brand">{Number(c.coeficiente).toFixed(8)}</td>
                     <td className="px-5 py-3 text-right">
-                      <div className="inline-flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => remove(c.id)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
+                      {canEdit && (
+                        <div className="inline-flex gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => remove(c.id)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

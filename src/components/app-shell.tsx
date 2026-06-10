@@ -15,7 +15,7 @@ const navItems = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isMasterAdmin } = useAuth();
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const items = [
     ...navItems,
     { to: "/configuracoes", label: "Configurações", icon: Settings },
-    ...(isAdmin ? [{ to: "/admin", label: "Usuários", icon: Users }] : []),
+    ...(isMasterAdmin ? [{ to: "/admin", label: "Usuários", icon: Users }] : []),
   ];
 
   return (
@@ -68,7 +68,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SimulationsCounter />
             <div className="text-right leading-tight">
               <div className="text-xs font-medium text-foreground">{user?.user_metadata?.full_name || user?.email}</div>
-              {isAdmin && <div className="text-[10px] font-semibold uppercase tracking-wider text-octa">Admin</div>}
+              {isMasterAdmin ? (
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-octa">Master Admin</div>
+              ) : isAdmin ? (
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-octa">Supervisor</div>
+              ) : null}
             </div>
             <img src={logoDrs} alt="DRS Consultoria" className="h-8 w-8 rounded-md object-contain" />
             <button onClick={handleLogout} className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Sair">

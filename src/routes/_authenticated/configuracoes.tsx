@@ -28,7 +28,8 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 function ConfiguracoesPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isMasterAdmin } = useAuth();
+  const isAdmin = isMasterAdmin;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingReact, setSavingReact] = useState(false);
