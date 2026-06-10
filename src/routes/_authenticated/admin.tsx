@@ -1,16 +1,19 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, Loader2, Key, ShieldCheck, ShieldOff, UserCheck, UserX } from "lucide-react";
+import { Plus, Trash2, Loader2, Key, UserCheck, UserX, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { listUsers, createUser, deleteUser, setUserPassword, setUserAdmin, setUserActive } from "@/lib/admin.functions";
+import {
+  listUsers, createUser, deleteUser, setUserPassword,
+  setUserRole, setUserActive, listTeams, setUserTeam,
+} from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
@@ -18,16 +21,27 @@ export const Route = createFileRoute("/_authenticated/admin")({
     if (!data.session) throw redirect({ to: "/login" });
     const { data: role } = await supabase
       .from("user_roles")
-      .select("id")
+      .select("role")
       .eq("user_id", data.session.user.id)
-      .eq("role", "admin")
+      .in("role", ["master_admin", "admin"])
       .maybeSingle();
     if (!role) throw redirect({ to: "/" });
   },
   component: AdminPage,
 });
 
-interface AdminUser { id: string; email: string; full_name: string | null; roles: string[]; created_at: string; active: boolean; }
+type UserRole = "master_admin" | "supervisor" | "user";
+interface AdminUser {
+  id: string; email: string; full_name: string | null; role: UserRole;
+  created_at: string; active: boolean; team_id: string | null; team_name: string | null;
+}
+interface Team { id: string; name: string; supervisor_id: string | null; }
+
+const ROLE_LABEL: Record<UserRole, string> = {
+  master_admin: "Master Admin",
+  supervisor: "Supervisor",
+  user: "Vendedor",
+};
 
 function AdminPage() {
   const { user: me } = useAuth();
@@ -35,21 +49,28 @@ function AdminPage() {
   const fnCreate = useServerFn(createUser);
   const fnDelete = useServerFn(deleteUser);
   const fnPwd = useServerFn(setUserPassword);
-  const fnAdmin = useServerFn(setUserAdmin);
+  const fnRole = useServerFn(setUserRole);
   const fnActive = useServerFn(setUserActive);
+  const fnTeams = useServerFn(listTeams);
+  const fnSetTeam = useServerFn(setUserTeam);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [openNew, setOpenNew] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", full_name: "", is_admin: false });
+  const [form, setForm] = useState<{ email: string; password: string; full_name: string; role: "supervisor" | "user"; team_id: string; team_name: string }>({
+    email: "", password: "", full_name: "", role: "user", team_id: "", team_name: "",
+  });
   const [saving, setSaving] = useState(false);
   const [pwdFor, setPwdFor] = useState<AdminUser | null>(null);
   const [newPwd, setNewPwd] = useState("");
 
   const load = async () => {
     setLoading(true);
-    try { const data = await fnList(); setUsers(data as AdminUser[]); }
-    catch (e: any) { toast.error(e.message); }
+    try {
+      const [u, t] = await Promise.all([fnList(), fnTeams()]);
+      setUsers(u as AdminUser[]); setTeams(t as Team[]);
+    } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
@@ -57,11 +78,18 @@ function AdminPage() {
   const create = async () => {
     if (!form.email || !form.password || !form.full_name) { toast.error("Preencha todos os campos."); return; }
     if (form.password.length < 8) { toast.error("Senha deve ter no mínimo 8 caracteres."); return; }
+    if (form.role === "supervisor" && !form.team_name.trim()) { toast.error("Informe o nome da equipe."); return; }
     setSaving(true);
     try {
-      await fnCreate({ data: form });
+      await fnCreate({ data: {
+        email: form.email, password: form.password, full_name: form.full_name,
+        role: form.role,
+        team_id: form.role === "user" && form.team_id ? form.team_id : null,
+        team_name: form.role === "supervisor" ? form.team_name : null,
+      }});
       toast.success("Usuário criado");
-      setOpenNew(false); setForm({ email: "", password: "", full_name: "", is_admin: false });
+      setOpenNew(false);
+      setForm({ email: "", password: "", full_name: "", role: "user", team_id: "", team_name: "" });
       load();
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
@@ -73,9 +101,16 @@ function AdminPage() {
     catch (e: any) { toast.error(e.message); }
   };
 
-  const toggleAdmin = async (u: AdminUser, val: boolean) => {
-    try { await fnAdmin({ data: { user_id: u.id, is_admin: val } }); toast.success("Permissão atualizada"); load(); }
+  const changeRole = async (u: AdminUser, role: UserRole) => {
+    try { await fnRole({ data: { user_id: u.id, role } }); toast.success("Papel atualizado"); load(); }
     catch (e: any) { toast.error(e.message); }
+  };
+
+  const changeTeam = async (u: AdminUser, teamId: string | "none") => {
+    try {
+      await fnSetTeam({ data: { user_id: u.id, team_id: teamId === "none" ? null : teamId } });
+      toast.success("Equipe atualizada"); load();
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const toggleActive = async (u: AdminUser) => {
@@ -95,8 +130,8 @@ function AdminPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground md:text-3xl">Usuários</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Crie, gerencie e defina permissões de acesso.</p>
+          <h1 className="font-display text-2xl font-bold text-foreground md:text-3xl">Usuários e Equipes</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Crie supervisores e vendedores, atribua equipes e gerencie permissões.</p>
         </div>
         <Button onClick={() => setOpenNew(true)} className="h-11 bg-gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
           <Plus className="mr-2 h-4 w-4" /> Novo usuário
@@ -113,19 +148,46 @@ function AdminPage() {
                 <tr>
                   <th className="px-5 py-3 text-left">Nome</th>
                   <th className="px-5 py-3 text-left">E-mail</th>
+                  <th className="px-5 py-3 text-left">Papel</th>
+                  <th className="px-5 py-3 text-left">Equipe</th>
                   <th className="px-5 py-3 text-left">Status</th>
-                  <th className="px-5 py-3 text-left">Admin</th>
                   <th className="px-5 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => {
-                  const isAdmin = u.roles.includes("admin");
                   const isMe = u.id === me?.id;
                   return (
                     <tr key={u.id} className={`border-b border-border/60 last:border-0 ${!u.active ? "opacity-60" : ""}`}>
                       <td className="px-5 py-3 font-medium text-foreground">{u.full_name || "—"} {isMe && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}</td>
                       <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
+                      <td className="px-5 py-3">
+                        <Select value={u.role} disabled={isMe} onValueChange={(v) => changeRole(u, v as UserRole)}>
+                          <SelectTrigger className="h-9 w-[148px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="master_admin">Master Admin</SelectItem>
+                            <SelectItem value="supervisor">Supervisor</SelectItem>
+                            <SelectItem value="user">Vendedor</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-5 py-3">
+                        {u.role === "master_admin" ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : u.role === "supervisor" ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
+                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> {u.team_name || "(sem equipe)"}
+                          </span>
+                        ) : (
+                          <Select value={u.team_id ?? "none"} onValueChange={(v) => changeTeam(u, v as any)}>
+                            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Sem equipe" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Sem equipe</SelectItem>
+                              {teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </td>
                       <td className="px-5 py-3">
                         {u.active ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -136,9 +198,6 @@ function AdminPage() {
                             <span className="h-2 w-2 rounded-full bg-red-500" /> Inativo
                           </span>
                         )}
-                      </td>
-                      <td className="px-5 py-3">
-                        <Switch checked={isAdmin} disabled={(isMe && isAdmin) || !u.active} onCheckedChange={(v) => toggleAdmin(u, v)} />
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="inline-flex gap-1">
@@ -169,10 +228,34 @@ function AdminPage() {
             <div><Label>Nome completo</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="h-11" /></div>
             <div><Label>E-mail</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-11" /></div>
             <div><Label>Senha (mín. 8)</Label><Input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="h-11" /></div>
-            <label className="flex items-center justify-between rounded-lg border border-border p-3">
-              <span className="text-sm font-medium">Administrador</span>
-              <Switch checked={form.is_admin} onCheckedChange={(v) => setForm({ ...form, is_admin: v })} />
-            </label>
+            <div>
+              <Label>Papel</Label>
+              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as any, team_id: "", team_name: "" })}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="supervisor">Supervisor (gerencia uma equipe)</SelectItem>
+                  <SelectItem value="user">Vendedor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.role === "supervisor" && (
+              <div>
+                <Label>Nome da equipe / empresa</Label>
+                <Input value={form.team_name} onChange={(e) => setForm({ ...form, team_name: e.target.value })} className="h-11" placeholder="Empresa A" />
+              </div>
+            )}
+            {form.role === "user" && (
+              <div>
+                <Label>Equipe (supervisor)</Label>
+                <Select value={form.team_id || "none"} onValueChange={(v) => setForm({ ...form, team_id: v === "none" ? "" : v })}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Sem equipe" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem equipe (atribuir depois)</SelectItem>
+                    {teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpenNew(false)}>Cancelar</Button>
