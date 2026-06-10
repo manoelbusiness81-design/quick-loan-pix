@@ -45,6 +45,7 @@ export type Database = {
           owner_id: string
           prazo: number
           taxa: number
+          team_id: string | null
           updated_at: string
         }
         Insert: {
@@ -56,6 +57,7 @@ export type Database = {
           owner_id: string
           prazo: number
           taxa: number
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -67,9 +69,18 @@ export type Database = {
           owner_id?: string
           prazo?: number
           taxa?: number
+          team_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coefficients_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commissions: {
         Row: {
@@ -80,6 +91,7 @@ export type Database = {
           owner_id: string
           percentual: number
           taxa: number | null
+          team_id: string | null
           updated_at: string
         }
         Insert: {
@@ -90,6 +102,7 @@ export type Database = {
           owner_id: string
           percentual: number
           taxa?: number | null
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -100,9 +113,18 @@ export type Database = {
           owner_id?: string
           percentual?: number
           taxa?: number | null
+          team_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -203,6 +225,56 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          created_at: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          supervisor_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          supervisor_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          supervisor_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -256,6 +328,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_user_data: { Args: { _owner: string }; Returns: boolean }
+      current_team_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -263,9 +337,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_master_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_supervisor: { Args: { _user_id: string }; Returns: boolean }
+      same_team_as: { Args: { _other: string }; Returns: boolean }
+      team_id_of: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "master_admin" | "supervisor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -393,7 +471,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "master_admin", "supervisor"],
     },
   },
 } as const
