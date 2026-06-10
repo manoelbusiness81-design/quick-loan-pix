@@ -75,7 +75,7 @@ function CommissionsPage() {
 
 /* ============================ EMPRESA ============================ */
 function CompanyCommissions({ mod }: { mod: Modalidade }) {
-  const { user } = useAuth();
+  const { user, isMasterAdmin, teamId } = useAuth();
   const [list, setList] = useState<Comm[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Comm | null>(null);
@@ -113,6 +113,8 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
       modalidade: mod,
       carencia: mod === "novo_normal" ? parseInt(form.carencia) : null,
       owner_id: user.id,
+      // Master Admin saves as global (NULL); supervisor saves under their team.
+      team_id: isMasterAdmin ? null : (teamId ?? null),
     };
     const { error } = editing
       ? await (supabase.from("commissions") as any).update(payload).eq("id", editing.id)
