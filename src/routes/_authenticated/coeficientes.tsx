@@ -173,6 +173,7 @@ function CoefficientsPage() {
                   <SelectItem value="refinanciamento">Refinanciamento</SelectItem>
                   <SelectItem value="novo_emprestimo">Novo LOAS</SelectItem>
                   <SelectItem value="novo_normal">Novo Normal</SelectItem>
+                  <SelectItem value="portabilidade">Portabilidade</SelectItem>
                 </SelectContent>
               </Select>
             </div>
