@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SimulationCard, type SimulationData, type ParcelaResumo } from "@/components/simulation-card";
 import { NovoEmprestimo } from "@/components/novo-emprestimo";
 import { NovoNormal } from "@/components/novo-normal";
+import { Portabilidade } from "@/components/portabilidade";
 import { brl, formatPhoneBR, onlyDigits, pct } from "@/lib/format";
 import { toast } from "sonner";
 
