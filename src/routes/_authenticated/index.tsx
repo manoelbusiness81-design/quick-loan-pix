@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SimulationCard, type SimulationData, type ParcelaResumo } from "@/components/simulation-card";
 import { NovoEmprestimo } from "@/components/novo-emprestimo";
 import { NovoNormal } from "@/components/novo-normal";
+import { Portabilidade } from "@/components/portabilidade";
 import { brl, formatPhoneBR, onlyDigits, pct } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -55,7 +56,7 @@ function SimulatorPage() {
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo" | "novo_normal">("refinanciamento");
+  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade">("refinanciamento");
 
   useEffect(() => {
     if (!user) return;
@@ -230,11 +231,15 @@ function SimulatorPage() {
               ? "Simulador de Refinanciamento"
               : modalidade === "novo_emprestimo"
               ? "Simulador de Novo LOAS"
-              : "Simulador de Novo Normal"}
+              : modalidade === "novo_normal"
+              ? "Simulador de Novo Normal"
+              : "Simulador de Portabilidade"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {modalidade === "refinanciamento"
               ? `Combine até ${MAX_PARCELAS} contratos. Saldo devedor calculado automaticamente.`
+              : modalidade === "portabilidade"
+              ? "Selecione a taxa Finanto e calcule a economia por contrato."
               : "Calcule valor liberado a partir da margem disponível."}
           </p>
         </div>
@@ -249,6 +254,7 @@ function SimulatorPage() {
           { v: "refinanciamento", label: "Refinanciamento" },
           { v: "novo_emprestimo", label: "Novo LOAS" },
           { v: "novo_normal", label: "Novo Normal" },
+          { v: "portabilidade", label: "Portabilidade" },
         ] as const).map((m) => (
           <button
             key={m.v}
@@ -264,6 +270,7 @@ function SimulatorPage() {
 
       {modalidade === "novo_emprestimo" ? <NovoEmprestimo /> : null}
       {modalidade === "novo_normal" ? <NovoNormal /> : null}
+      {modalidade === "portabilidade" ? <Portabilidade /> : null}
       {modalidade === "refinanciamento" && (
 
       <div className="grid gap-6 lg:grid-cols-2">
