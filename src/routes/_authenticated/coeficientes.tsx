@@ -15,13 +15,14 @@ export const Route = createFileRoute("/_authenticated/coeficientes")({
   component: CoefficientsPage,
 });
 
-type Modalidade = "refinanciamento" | "novo_emprestimo" | "novo_normal";
+type Modalidade = "refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade";
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade: Modalidade; }
 
 const MOD_LABEL: Record<Modalidade, string> = {
   refinanciamento: "Refinanciamento",
   novo_emprestimo: "Novo LOAS",
   novo_normal: "Novo Normal",
+  portabilidade: "Portabilidade",
 };
 
 function CoefficientsPage() {
