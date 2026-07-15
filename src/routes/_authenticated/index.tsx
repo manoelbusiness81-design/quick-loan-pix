@@ -12,6 +12,7 @@ import { SimulationCard, type SimulationData, type ParcelaResumo } from "@/compo
 import { NovoEmprestimo } from "@/components/novo-emprestimo";
 import { NovoNormal } from "@/components/novo-normal";
 import { Portabilidade } from "@/components/portabilidade";
+import { GovSp } from "@/components/gov-sp";
 import { brl, formatPhoneBR, onlyDigits, pct } from "@/lib/format";
 import { toast } from "sonner";
 
