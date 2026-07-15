@@ -234,13 +234,17 @@ function SimulatorPage() {
               ? "Simulador de Novo LOAS"
               : modalidade === "novo_normal"
               ? "Simulador de Novo Normal"
-              : "Simulador de Portabilidade"}
+              : modalidade === "portabilidade"
+              ? "Simulador de Portabilidade"
+              : "Simulador Gov SP"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {modalidade === "refinanciamento"
               ? `Combine até ${MAX_PARCELAS} contratos. Saldo devedor calculado automaticamente.`
               : modalidade === "portabilidade"
               ? "Selecione a taxa Finanto e calcule a economia por contrato."
+              : modalidade === "gov_sp"
+              ? "Informe as margens de Cartão e Novo para gerar as opções de prazo."
               : "Calcule valor liberado a partir da margem disponível."}
           </p>
         </div>
