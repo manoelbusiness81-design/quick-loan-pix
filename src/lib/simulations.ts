@@ -59,6 +59,7 @@ export const MODALIDADE_LABEL: Record<string, string> = {
   novo_emprestimo: "Novo LOAS",
   novo_normal: "Novo Normal",
   portabilidade: "Portabilidade",
+  gov_sp: "Gov SP",
 };
 
 export async function fetchReactivationTemplate(): Promise<string> {
