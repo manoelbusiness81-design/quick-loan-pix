@@ -57,7 +57,7 @@ function SimulatorPage() {
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade">("refinanciamento");
+  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade" | "gov_sp">("refinanciamento");
 
   useEffect(() => {
     if (!user) return;
