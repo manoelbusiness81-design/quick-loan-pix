@@ -1,0 +1,121 @@
+import { forwardRef } from "react";
+import { brl } from "@/lib/format";
+import { CheckCircle2 } from "lucide-react";
+import logoDrs from "@/assets/logo-drs.jpg";
+
+export interface GovSpOpcao {
+  prazo: number;
+  parcela: number;
+  valorLiberado: number;
+}
+
+export interface GovSpCardData {
+  cliente: string;
+  margemCartao: number;
+  margemNovo: number;
+  opcoes: GovSpOpcao[]; // 96, 60, 48, 24, 12
+  antecipada: number;
+  parcelaAntecipada: number;
+}
+
+export const GovSpCard = forwardRef<HTMLDivElement, { data: GovSpCardData }>(({ data }, ref) => {
+  const valorLiberado = data.opcoes[0]?.valorLiberado ?? 0;
+  return (
+    <div
+      ref={ref}
+      style={{ width: 720, fontFamily: "Inter, system-ui, sans-serif" }}
+      className="overflow-hidden rounded-3xl bg-white"
+    >
+      {/* Header */}
+      <div className="bg-gradient-navy px-10 pb-8 pt-10 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-white">
+              <img src={logoDrs} alt="DRS" className="h-full w-full object-contain" />
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">
+                Simulação Gov SP
+              </div>
+              <div className="mt-0.5 font-display text-xl font-bold leading-tight">
+                {data.cliente || "Cliente"}
+              </div>
+            </div>
+          </div>
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/10 backdrop-blur">
+            <CheckCircle2 className="h-7 w-7 text-brand" strokeWidth={2.5} />
+          </div>
+        </div>
+
+        {/* Hero — valor liberado único */}
+        <div className="mt-7 rounded-2xl bg-gradient-brand p-6 shadow-brand">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-foreground/80">
+            Valor Liberado
+          </div>
+          <div
+            className="mt-1 font-display font-extrabold leading-none text-brand-foreground tabular-nums"
+            style={{ fontSize: 60, letterSpacing: "-0.04em" }}
+          >
+            {brl(valorLiberado)}
+          </div>
+          <div className="mt-2 text-sm font-medium text-brand-foreground/85">
+            Escolha o prazo que melhor se ajusta à sua parcela
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-10 pb-10 pt-7">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Opções de prazo
+          </div>
+          <div className="text-[10px] font-semibold text-muted-foreground">
+            Margem Cartão {brl(data.margemCartao)} · Margem Novo {brl(data.margemNovo)}
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary">
+              <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-2.5">Prazo</th>
+                <th className="px-4 py-2.5 text-right">Parcela total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {data.opcoes.map((o) => (
+                <tr key={o.prazo} className="tabular-nums">
+                  <td className="px-4 py-3 font-semibold text-foreground">{o.prazo}x</td>
+                  <td className="px-4 py-3 text-right font-display text-base font-extrabold text-brand">{brl(o.parcela)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {data.antecipada > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Antecipada</div>
+              <div className="mt-1 font-display text-base font-extrabold tabular-nums text-foreground">{brl(data.antecipada)}</div>
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Parcela cartão</div>
+              <div className="mt-1 font-display text-base font-extrabold tabular-nums text-foreground">{brl(data.parcelaAntecipada)}</div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-7 border-t border-border pt-5 text-center">
+          <div className="font-display text-sm font-semibold text-foreground">
+            Simulação sem compromisso · sujeita à análise.
+          </div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            Gerado em {new Date().toLocaleDateString("pt-BR")} · DRS Consultoria
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+GovSpCard.displayName = "GovSpCard";
