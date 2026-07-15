@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/coeficientes")({
   component: CoefficientsPage,
 });
 
-type Modalidade = "refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade";
+type Modalidade = "refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade" | "gov_sp";
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade: Modalidade; }
 
 const MOD_LABEL: Record<Modalidade, string> = {
@@ -23,6 +23,7 @@ const MOD_LABEL: Record<Modalidade, string> = {
   novo_emprestimo: "Novo LOAS",
   novo_normal: "Novo Normal",
   portabilidade: "Portabilidade",
+  gov_sp: "Gov SP",
 };
 
 function CoefficientsPage() {
