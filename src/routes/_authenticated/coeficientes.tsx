@@ -109,7 +109,7 @@ function CoefficientsPage() {
 
       {/* Tabs modalidade */}
       <div className="inline-flex flex-wrap rounded-xl bg-secondary p-1">
-        {(["refinanciamento", "novo_emprestimo", "novo_normal", "portabilidade"] as Modalidade[]).map((m) => (
+        {(["refinanciamento", "novo_emprestimo", "novo_normal", "portabilidade", "gov_sp"] as Modalidade[]).map((m) => (
           <button
             key={m}
             onClick={() => setFilter(m)}
