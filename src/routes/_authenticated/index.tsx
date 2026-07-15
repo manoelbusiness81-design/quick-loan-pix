@@ -260,6 +260,7 @@ function SimulatorPage() {
           { v: "novo_emprestimo", label: "Novo LOAS" },
           { v: "novo_normal", label: "Novo Normal" },
           { v: "portabilidade", label: "Portabilidade" },
+          { v: "gov_sp", label: "Gov SP" },
         ] as const).map((m) => (
           <button
             key={m.v}
@@ -276,6 +277,7 @@ function SimulatorPage() {
       {modalidade === "novo_emprestimo" ? <NovoEmprestimo /> : null}
       {modalidade === "novo_normal" ? <NovoNormal /> : null}
       {modalidade === "portabilidade" ? <Portabilidade /> : null}
+      {modalidade === "gov_sp" ? <GovSp /> : null}
       {modalidade === "refinanciamento" && (
 
       <div className="grid gap-6 lg:grid-cols-2">
