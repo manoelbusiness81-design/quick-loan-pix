@@ -9,9 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
-  WHATSAPP_MESSAGE_KEY,
-  DEFAULT_WHATSAPP_MESSAGE,
+  DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE,
+  WHATSAPP_MODALIDADES,
+  whatsappKeyFor,
   renderWhatsappMessage,
+  type WhatsappModalidade,
 } from "@/lib/whatsapp";
 import {
   REACTIVATION_MESSAGE_KEY,
@@ -33,22 +35,36 @@ function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingReact, setSavingReact] = useState(false);
-  const [message, setMessage] = useState<string>(DEFAULT_WHATSAPP_MESSAGE);
+  const [activeMod, setActiveMod] = useState<WhatsappModalidade>("refinanciamento");
+  const [messages, setMessages] = useState<Record<WhatsappModalidade, string>>({
+    ...DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE,
+  });
   const [reactMsg, setReactMsg] = useState<string>(DEFAULT_REACTIVATION_MESSAGE);
   const [alsoGlobalWa, setAlsoGlobalWa] = useState(false);
   const [alsoGlobalRx, setAlsoGlobalRx] = useState(false);
+
+  const message = messages[activeMod];
+  const setMessage = (v: string) => setMessages((m) => ({ ...m, [activeMod]: v }));
 
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
       setLoading(true);
-      const [{ data: waOwn }, { data: rxOwn }, { data: waGlobal }, { data: rxGlobal }] = await Promise.all([
-        (supabase.from("user_settings") as any).select("value").eq("user_id", user.id).eq("key", WHATSAPP_MESSAGE_KEY).maybeSingle(),
+      const waKeys = WHATSAPP_MODALIDADES.map((m) => whatsappKeyFor(m.value));
+      const [{ data: waOwn }, { data: waGlobal }, { data: rxOwn }, { data: rxGlobal }] = await Promise.all([
+        (supabase.from("user_settings") as any).select("key,value").eq("user_id", user.id).in("key", waKeys),
+        (supabase.from("app_settings") as any).select("key,value").in("key", waKeys),
         (supabase.from("user_settings") as any).select("value").eq("user_id", user.id).eq("key", REACTIVATION_MESSAGE_KEY).maybeSingle(),
-        (supabase.from("app_settings") as any).select("value").eq("key", WHATSAPP_MESSAGE_KEY).maybeSingle(),
         (supabase.from("app_settings") as any).select("value").eq("key", REACTIVATION_MESSAGE_KEY).maybeSingle(),
       ]);
-      setMessage((waOwn?.value as string) || (waGlobal?.value as string) || DEFAULT_WHATSAPP_MESSAGE);
+      const ownMap = new Map<string, string>((waOwn ?? []).map((r: any) => [r.key, r.value]));
+      const globalMap = new Map<string, string>((waGlobal ?? []).map((r: any) => [r.key, r.value]));
+      const next = { ...DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE };
+      for (const m of WHATSAPP_MODALIDADES) {
+        const k = whatsappKeyFor(m.value);
+        next[m.value] = ownMap.get(k) || globalMap.get(k) || DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE[m.value];
+      }
+      setMessages(next);
       setReactMsg((rxOwn?.value as string) || (rxGlobal?.value as string) || DEFAULT_REACTIVATION_MESSAGE);
       setLoading(false);
     })();
@@ -59,12 +75,12 @@ function ConfiguracoesPage() {
     if (!message.trim()) { toast.error("A mensagem não pode ficar em branco."); return; }
     setSaving(true);
     const { error } = await (supabase.from("user_settings") as any).upsert(
-      { user_id: user.id, key: WHATSAPP_MESSAGE_KEY, value: message, updated_at: new Date().toISOString() },
+      { user_id: user.id, key: whatsappKeyFor(activeMod), value: message, updated_at: new Date().toISOString() },
       { onConflict: "user_id,key" }
     );
     if (!error && isAdmin && alsoGlobalWa) {
       await (supabase.from("app_settings") as any).upsert(
-        { key: WHATSAPP_MESSAGE_KEY, value: message, updated_at: new Date().toISOString(), updated_by: user.id },
+        { key: whatsappKeyFor(activeMod), value: message, updated_at: new Date().toISOString(), updated_by: user.id },
         { onConflict: "key" }
       );
     }
@@ -94,9 +110,10 @@ function ConfiguracoesPage() {
 
   const resetWa = async () => {
     if (!user?.id) return;
-    await (supabase.from("user_settings") as any).delete().eq("user_id", user.id).eq("key", WHATSAPP_MESSAGE_KEY);
-    const { data: g } = await (supabase.from("app_settings") as any).select("value").eq("key", WHATSAPP_MESSAGE_KEY).maybeSingle();
-    setMessage((g?.value as string) || DEFAULT_WHATSAPP_MESSAGE);
+    const key = whatsappKeyFor(activeMod);
+    await (supabase.from("user_settings") as any).delete().eq("user_id", user.id).eq("key", key);
+    const { data: g } = await (supabase.from("app_settings") as any).select("value").eq("key", key).maybeSingle();
+    setMessage((g?.value as string) || DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE[activeMod]);
     toast.success("Mensagem redefinida para o padrão");
   };
 
@@ -108,7 +125,12 @@ function ConfiguracoesPage() {
     toast.success("Mensagem redefinida para o padrão");
   };
 
-  const preview = renderWhatsappMessage(message, 8542.33);
+  const preview = renderWhatsappMessage(message, 8542.33, {
+    nome: "João da Silva",
+    parcelaAtual: 1250,
+    parcelaNova: 980.45,
+    parcela: 980.45,
+  });
   const reactPreview = renderReactivationMessage(reactMsg, { nome: "João da Silva", valorLiberado: 8542.33 });
 
   return (
@@ -123,26 +145,64 @@ function ConfiguracoesPage() {
       <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-primary" />
-          <h2 className="font-display text-lg font-bold text-foreground">Mensagem Padrão do WhatsApp</h2>
+          <h2 className="font-display text-lg font-bold text-foreground">Mensagens do WhatsApp por Produto</h2>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">Utilizada em todas as simulações que você envia pelo WhatsApp.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Cada produto possui a sua própria mensagem, editada e salva individualmente.</p>
 
         {loading ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
         ) : (
           <div className="mt-4 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {WHATSAPP_MODALIDADES.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setActiveMod(m.value)}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                    activeMod === m.value
+                      ? "bg-primary text-primary-foreground shadow-soft"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/70"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground">Mensagem</Label>
-              <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={6} className="mt-1.5 font-mono text-sm" />
+              <Label className="text-xs font-semibold text-muted-foreground">
+                Mensagem — {WHATSAPP_MODALIDADES.find((m) => m.value === activeMod)?.label}
+              </Label>
+              <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={8} className="mt-1.5 font-mono text-sm" />
             </div>
 
             <div className="rounded-xl border border-dashed border-border bg-secondary/40 p-4">
               <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Variáveis disponíveis</div>
-              <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                <code className="rounded-md bg-card px-2 py-1 font-mono text-primary">{"{VALOR_LIBERADO}"}</code>
-                <span className="text-muted-foreground">→ substituído pelo valor liberado da simulação (ex.: 8.542,33).</span>
+              <div className="mt-2 grid gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <code className="rounded-md bg-card px-2 py-1 font-mono text-primary">{"{NOME}"}</code>
+                  <span className="text-muted-foreground">→ nome do cliente.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="rounded-md bg-card px-2 py-1 font-mono text-primary">{"{VALOR_LIBERADO}"}</code>
+                  <span className="text-muted-foreground">→ valor liberado / economia total da simulação.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="rounded-md bg-card px-2 py-1 font-mono text-primary">{"{PARCELA_ATUAL}"}</code>
+                  <span className="text-muted-foreground">→ parcela atual do cliente (Portabilidade).</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="rounded-md bg-card px-2 py-1 font-mono text-primary">{"{PARCELA_NOVA}"}</code>
+                  <span className="text-muted-foreground">→ nova parcela reduzida (Portabilidade).</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="rounded-md bg-card px-2 py-1 font-mono text-primary">{"{PARCELA}"}</code>
+                  <span className="text-muted-foreground">→ valor da parcela simulada.</span>
+                </div>
               </div>
             </div>
+
 
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
               <div className="text-[11px] font-bold uppercase tracking-wider text-primary">Pré-visualização (exemplo R$ 8.542,33)</div>

@@ -118,8 +118,8 @@ export function NovoEmprestimo() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const template = await fetchWhatsappTemplate();
-      const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado));
+      const template = await fetchWhatsappTemplate("novo_emprestimo");
+      const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado, { nome: cliente, parcela: parcelaN }));
       await recordSimulation({
         cliente,
         telefone: phone,

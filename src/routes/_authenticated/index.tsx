@@ -180,8 +180,8 @@ function SimulatorPage() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const template = await fetchWhatsappTemplate();
-      const msg = encodeURIComponent(renderWhatsappMessage(template, totalTroco));
+      const template = await fetchWhatsappTemplate("refinanciamento");
+      const msg = encodeURIComponent(renderWhatsappMessage(template, totalTroco, { nome: cliente }));
       await recordSimulation({
         cliente,
         telefone: phone,

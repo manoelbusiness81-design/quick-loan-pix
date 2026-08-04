@@ -189,9 +189,9 @@ export function Portabilidade() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const template = await fetchWhatsappTemplate();
+      const template = await fetchWhatsappTemplate("portabilidade");
       // Na portabilidade, o "valor liberado" da mensagem é a economia total.
-      const msg = encodeURIComponent(renderWhatsappMessage(template, economiaTotal));
+      const msg = encodeURIComponent(renderWhatsappMessage(template, economiaTotal, { nome: cliente, parcelaAtual: totalParcelaAtual, parcelaNova: totalParcelaReduzida }));
       await recordSimulation({
         cliente,
         telefone: phone,

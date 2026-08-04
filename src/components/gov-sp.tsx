@@ -146,8 +146,8 @@ export function GovSp() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const template = await fetchWhatsappTemplate();
-      const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado));
+      const template = await fetchWhatsappTemplate("gov_sp");
+      const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado, { nome: cliente, parcela: opcoes[0]?.parcela ?? 0 }));
       await recordSimulation({
         cliente,
         telefone: phone,
