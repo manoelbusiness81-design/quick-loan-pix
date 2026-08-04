@@ -75,12 +75,12 @@ function ConfiguracoesPage() {
     if (!message.trim()) { toast.error("A mensagem não pode ficar em branco."); return; }
     setSaving(true);
     const { error } = await (supabase.from("user_settings") as any).upsert(
-      { user_id: user.id, key: WHATSAPP_MESSAGE_KEY, value: message, updated_at: new Date().toISOString() },
+      { user_id: user.id, key: whatsappKeyFor(activeMod), value: message, updated_at: new Date().toISOString() },
       { onConflict: "user_id,key" }
     );
     if (!error && isAdmin && alsoGlobalWa) {
       await (supabase.from("app_settings") as any).upsert(
-        { key: WHATSAPP_MESSAGE_KEY, value: message, updated_at: new Date().toISOString(), updated_by: user.id },
+        { key: whatsappKeyFor(activeMod), value: message, updated_at: new Date().toISOString(), updated_by: user.id },
         { onConflict: "key" }
       );
     }
@@ -110,9 +110,10 @@ function ConfiguracoesPage() {
 
   const resetWa = async () => {
     if (!user?.id) return;
-    await (supabase.from("user_settings") as any).delete().eq("user_id", user.id).eq("key", WHATSAPP_MESSAGE_KEY);
-    const { data: g } = await (supabase.from("app_settings") as any).select("value").eq("key", WHATSAPP_MESSAGE_KEY).maybeSingle();
-    setMessage((g?.value as string) || DEFAULT_WHATSAPP_MESSAGE);
+    const key = whatsappKeyFor(activeMod);
+    await (supabase.from("user_settings") as any).delete().eq("user_id", user.id).eq("key", key);
+    const { data: g } = await (supabase.from("app_settings") as any).select("value").eq("key", key).maybeSingle();
+    setMessage((g?.value as string) || DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE[activeMod]);
     toast.success("Mensagem redefinida para o padrão");
   };
 
