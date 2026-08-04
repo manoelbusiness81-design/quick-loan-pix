@@ -91,7 +91,9 @@ export async function fetchWhatsappTemplate(
     const global = await readSetting("app_settings", key);
     if (global) return global;
 
-    // Fallback para a mensagem única legada (compatibilidade)
+    // Fallback para a mensagem única legada (compatibilidade).
+    // Portabilidade possui texto próprio e não herda a mensagem legada.
+    if (modalidade === "portabilidade") return DEFAULT_PORTABILIDADE_MESSAGE;
     if (uid) {
       const legacyOwn = await readSetting("user_settings", WHATSAPP_MESSAGE_KEY, uid);
       if (legacyOwn) return legacyOwn;
