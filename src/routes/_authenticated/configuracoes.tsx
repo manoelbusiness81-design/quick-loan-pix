@@ -9,9 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
-  WHATSAPP_MESSAGE_KEY,
-  DEFAULT_WHATSAPP_MESSAGE,
+  DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE,
+  WHATSAPP_MODALIDADES,
+  whatsappKeyFor,
   renderWhatsappMessage,
+  type WhatsappModalidade,
 } from "@/lib/whatsapp";
 import {
   REACTIVATION_MESSAGE_KEY,
