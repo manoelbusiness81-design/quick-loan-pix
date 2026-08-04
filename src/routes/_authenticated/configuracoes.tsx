@@ -35,22 +35,36 @@ function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingReact, setSavingReact] = useState(false);
-  const [message, setMessage] = useState<string>(DEFAULT_WHATSAPP_MESSAGE);
+  const [activeMod, setActiveMod] = useState<WhatsappModalidade>("refinanciamento");
+  const [messages, setMessages] = useState<Record<WhatsappModalidade, string>>({
+    ...DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE,
+  });
   const [reactMsg, setReactMsg] = useState<string>(DEFAULT_REACTIVATION_MESSAGE);
   const [alsoGlobalWa, setAlsoGlobalWa] = useState(false);
   const [alsoGlobalRx, setAlsoGlobalRx] = useState(false);
+
+  const message = messages[activeMod];
+  const setMessage = (v: string) => setMessages((m) => ({ ...m, [activeMod]: v }));
 
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
       setLoading(true);
-      const [{ data: waOwn }, { data: rxOwn }, { data: waGlobal }, { data: rxGlobal }] = await Promise.all([
-        (supabase.from("user_settings") as any).select("value").eq("user_id", user.id).eq("key", WHATSAPP_MESSAGE_KEY).maybeSingle(),
+      const waKeys = WHATSAPP_MODALIDADES.map((m) => whatsappKeyFor(m.value));
+      const [{ data: waOwn }, { data: waGlobal }, { data: rxOwn }, { data: rxGlobal }] = await Promise.all([
+        (supabase.from("user_settings") as any).select("key,value").eq("user_id", user.id).in("key", waKeys),
+        (supabase.from("app_settings") as any).select("key,value").in("key", waKeys),
         (supabase.from("user_settings") as any).select("value").eq("user_id", user.id).eq("key", REACTIVATION_MESSAGE_KEY).maybeSingle(),
-        (supabase.from("app_settings") as any).select("value").eq("key", WHATSAPP_MESSAGE_KEY).maybeSingle(),
         (supabase.from("app_settings") as any).select("value").eq("key", REACTIVATION_MESSAGE_KEY).maybeSingle(),
       ]);
-      setMessage((waOwn?.value as string) || (waGlobal?.value as string) || DEFAULT_WHATSAPP_MESSAGE);
+      const ownMap = new Map<string, string>((waOwn ?? []).map((r: any) => [r.key, r.value]));
+      const globalMap = new Map<string, string>((waGlobal ?? []).map((r: any) => [r.key, r.value]));
+      const next = { ...DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE };
+      for (const m of WHATSAPP_MODALIDADES) {
+        const k = whatsappKeyFor(m.value);
+        next[m.value] = ownMap.get(k) || globalMap.get(k) || DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE[m.value];
+      }
+      setMessages(next);
       setReactMsg((rxOwn?.value as string) || (rxGlobal?.value as string) || DEFAULT_REACTIVATION_MESSAGE);
       setLoading(false);
     })();
