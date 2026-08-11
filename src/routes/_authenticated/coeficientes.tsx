@@ -15,12 +15,11 @@ export const Route = createFileRoute("/_authenticated/coeficientes")({
   component: CoefficientsPage,
 });
 
-type Modalidade = "refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade" | "gov_sp";
+type Modalidade = "refinanciamento" | "novo_normal" | "portabilidade" | "gov_sp";
 interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade: Modalidade; }
 
 const MOD_LABEL: Record<Modalidade, string> = {
   refinanciamento: "Refinanciamento",
-  novo_emprestimo: "Novo LOAS",
   novo_normal: "Novo Normal",
   portabilidade: "Portabilidade",
   gov_sp: "Gov SP",
@@ -109,7 +108,7 @@ function CoefficientsPage() {
 
       {/* Tabs modalidade */}
       <div className="inline-flex flex-wrap rounded-xl bg-secondary p-1">
-        {(["refinanciamento", "novo_emprestimo", "novo_normal", "portabilidade", "gov_sp"] as Modalidade[]).map((m) => (
+        {(["refinanciamento", "novo_normal", "portabilidade", "gov_sp"] as Modalidade[]).map((m) => (
           <button
             key={m}
             onClick={() => setFilter(m)}
@@ -172,7 +171,6 @@ function CoefficientsPage() {
                 <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="refinanciamento">Refinanciamento</SelectItem>
-                  <SelectItem value="novo_emprestimo">Novo LOAS</SelectItem>
                   <SelectItem value="novo_normal">Novo Normal</SelectItem>
                   <SelectItem value="portabilidade">Portabilidade</SelectItem>
                   <SelectItem value="gov_sp">Gov SP</SelectItem>

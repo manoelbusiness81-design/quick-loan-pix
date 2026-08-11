@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SimulationCard, type SimulationData, type ParcelaResumo } from "@/components/simulation-card";
-import { NovoEmprestimo } from "@/components/novo-emprestimo";
 import { NovoNormal } from "@/components/novo-normal";
 import { Portabilidade } from "@/components/portabilidade";
 import { GovSp } from "@/components/gov-sp";
+import { GovMa } from "@/components/gov-ma";
 import { brl, formatPhoneBR, onlyDigits, pct } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -57,7 +57,7 @@ function SimulatorPage() {
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade" | "gov_sp">("refinanciamento");
+  const [modalidade, setModalidade] = useState<"refinanciamento" | "novo_normal" | "portabilidade" | "gov_sp" | "gov_ma">("refinanciamento");
 
   useEffect(() => {
     if (!user) return;
@@ -230,13 +230,13 @@ function SimulatorPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
             {modalidade === "refinanciamento"
               ? "Simulador de Refinanciamento"
-              : modalidade === "novo_emprestimo"
-              ? "Simulador de Novo LOAS"
               : modalidade === "novo_normal"
               ? "Simulador de Novo Normal"
               : modalidade === "portabilidade"
               ? "Simulador de Portabilidade"
-              : "Simulador Gov SP"}
+              : modalidade === "gov_sp"
+              ? "Simulador Gov SP"
+              : "Simulador Gov MA"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {modalidade === "refinanciamento"
@@ -245,6 +245,8 @@ function SimulatorPage() {
               ? "Selecione a taxa Finanto e calcule a economia por contrato."
               : modalidade === "gov_sp"
               ? "Informe as margens de Cartão e Novo para gerar as opções de prazo."
+              : modalidade === "gov_ma"
+              ? "Selecione o cálculo (117x ou 96x), a taxa e o valor do Cartão Crédito."
               : "Calcule valor liberado a partir da margem disponível."}
           </p>
         </div>
@@ -257,10 +259,10 @@ function SimulatorPage() {
       <div className="inline-flex flex-wrap rounded-xl bg-secondary p-1">
         {([
           { v: "refinanciamento", label: "Refinanciamento" },
-          { v: "novo_emprestimo", label: "Novo LOAS" },
           { v: "novo_normal", label: "Novo Normal" },
           { v: "portabilidade", label: "Portabilidade" },
           { v: "gov_sp", label: "Gov SP" },
+          { v: "gov_ma", label: "Gov MA" },
         ] as const).map((m) => (
           <button
             key={m.v}
@@ -274,10 +276,10 @@ function SimulatorPage() {
         ))}
       </div>
 
-      {modalidade === "novo_emprestimo" ? <NovoEmprestimo /> : null}
       {modalidade === "novo_normal" ? <NovoNormal /> : null}
       {modalidade === "portabilidade" ? <Portabilidade /> : null}
       {modalidade === "gov_sp" ? <GovSp /> : null}
+      {modalidade === "gov_ma" ? <GovMa /> : null}
       {modalidade === "refinanciamento" && (
 
       <div className="grid gap-6 lg:grid-cols-2">

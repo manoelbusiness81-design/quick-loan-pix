@@ -5,17 +5,17 @@ export const WHATSAPP_MESSAGE_KEY = "whatsapp_message";
 
 export type WhatsappModalidade =
   | "refinanciamento"
-  | "novo_emprestimo"
   | "novo_normal"
   | "portabilidade"
-  | "gov_sp";
+  | "gov_sp"
+  | "gov_ma";
 
 export const WHATSAPP_MODALIDADES: { value: WhatsappModalidade; label: string }[] = [
   { value: "refinanciamento", label: "Refinanciamento" },
-  { value: "novo_emprestimo", label: "Novo LOAS" },
   { value: "novo_normal", label: "Novo Normal" },
   { value: "portabilidade", label: "Portabilidade" },
   { value: "gov_sp", label: "Gov SP" },
+  { value: "gov_ma", label: "Gov MA" },
 ];
 
 /** Chave de configuração por modalidade. */
@@ -29,10 +29,10 @@ export const DEFAULT_PORTABILIDADE_MESSAGE =
 
 export const DEFAULT_WHATSAPP_MESSAGE_BY_MODALIDADE: Record<WhatsappModalidade, string> = {
   refinanciamento: DEFAULT_WHATSAPP_MESSAGE,
-  novo_emprestimo: DEFAULT_WHATSAPP_MESSAGE,
   novo_normal: DEFAULT_WHATSAPP_MESSAGE,
   portabilidade: DEFAULT_PORTABILIDADE_MESSAGE,
   gov_sp: DEFAULT_WHATSAPP_MESSAGE,
+  gov_ma: DEFAULT_WHATSAPP_MESSAGE,
 };
 
 /** Formata um número como BRL sem o prefixo "R$ " (ex.: 8542.33 -> "8.542,33"). */

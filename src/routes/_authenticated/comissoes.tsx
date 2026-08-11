@@ -18,10 +18,9 @@ export const Route = createFileRoute("/_authenticated/comissoes")({
   component: CommissionsPage,
 });
 
-type Modalidade = "refinanciamento" | "novo_emprestimo" | "novo_normal";
+type Modalidade = "refinanciamento" | "novo_normal";
 const MOD_LABEL: Record<Modalidade, string> = {
   refinanciamento: "Refinanciamento",
-  novo_emprestimo: "Novo LOAS",
   novo_normal: "Novo Normal",
 };
 const CARENCIAS = [
@@ -48,7 +47,7 @@ function CommissionsPage() {
       </div>
 
       <div className="inline-flex rounded-xl bg-secondary p-1">
-        {(["refinanciamento", "novo_emprestimo", "novo_normal"] as Modalidade[]).map((m) => (
+        {(["refinanciamento", "novo_normal"] as Modalidade[]).map((m) => (
           <button
             key={m}
             onClick={() => setMod(m)}
@@ -140,7 +139,6 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
       <div className="flex justify-between">
         <p className="text-sm text-muted-foreground">
           {mod === "refinanciamento" && "Comissão total da empresa, por taxa."}
-          {mod === "novo_emprestimo" && "Comissão fixa da empresa para Novo LOAS."}
           {mod === "novo_normal" && "Comissão da empresa por tabela de carência (Sem carência, 30, 60 e 90 dias)."}
         </p>
         <Button onClick={openNew} className="h-10 bg-gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
@@ -395,7 +393,6 @@ function VendorView({ userId }: { userId: string }) {
 
   const grouped: Record<Modalidade, SellerComm[]> = {
     refinanciamento: list.filter(s => s.modalidade === "refinanciamento"),
-    novo_emprestimo: list.filter(s => s.modalidade === "novo_emprestimo"),
     novo_normal: list.filter(s => s.modalidade === "novo_normal"),
   };
 
@@ -412,7 +409,7 @@ function VendorView({ userId }: { userId: string }) {
         </div>
       )}
 
-      {(["refinanciamento", "novo_emprestimo", "novo_normal"] as Modalidade[]).map((m) => {
+      {(["refinanciamento", "novo_normal"] as Modalidade[]).map((m) => {
         const rows = grouped[m];
         if (rows.length === 0) return null;
         const showTaxa = m === "refinanciamento";

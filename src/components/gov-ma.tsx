@@ -1,83 +1,104 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import { Send, Sparkles, Loader2, Copy, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { brl, formatPhoneBR, onlyDigits } from "@/lib/format";
 import { toast } from "sonner";
-import { NovoEmprestimoCard, type NovoEmprestimoOpcao } from "./novo-emprestimo-card";
-import { CommissionPanel } from "./commission-panel";
+import { GovMaCard, type GovMaOpcao } from "./gov-ma-card";
 import { fetchWhatsappTemplate, renderWhatsappMessage } from "@/lib/whatsapp";
 import { recordSimulation } from "@/lib/simulations";
 
-interface Coef { id: string; bank: string; prazo: number; taxa: number; coeficiente: number; modalidade?: string; }
+/**
+ * GOV MA — réplica exata da planilha "Simulador GOV MA".
+ *
+ * Bloco 117x (C3 = Cartão Crédito, C5 = Taxa, C6 = 117):
+ *   E7  = C3 / coefPrincipal(taxa)
+ *   F7  = C3                                                     (prazo 117)
+ *   E9..E15 = C3 / coefDemais(taxa)
+ *   F(n) = ((C3*(1-(1+i)^-117)/i) * i / (1-(1+i)^-prazo)) * (1-desc)
+ *          prazos 58 (5%), 39 (6%), 29 (6%), 13 (8%)
+ *
+ * Bloco 96x (J3, J5, J6 = 96): mesma estrutura, prazos 60 (5%), 48 (6%), 24 (6%), 12 (8%).
+ */
 
-const TAXA_MENSAL = 0.02; // C1 na planilha Ex1
+type Bloco = "117" | "96";
+
+const COEF: Record<Bloco, { taxa: number; principal: number; demais: number }[]> = {
+  "117": [
+    { taxa: 2.9, principal: 0.0404869475841648, demais: 0.0404869475841648 },
+    { taxa: 3.25, principal: 0.0449172110089976, demais: 0.0455107986784606 },
+    { taxa: 3.3, principal: 0.0521910879344688, demais: 0.0521910879344688 },
+  ],
+  "96": [
+    { taxa: 2.9, principal: 0.0411738143404302, demais: 0.0411738143404302 },
+    { taxa: 3.15, principal: 0.0442559498674855, demais: 0.0411738143404302 },
+    { taxa: 3.25, principal: 0.0455107986784606, demais: 0.0455107986784606 },
+    { taxa: 3.3, principal: 0.0521910879344688, demais: 0.0521910879344688 },
+    { taxa: 3.4, principal: 0.0474153553203375, demais: 0.0474153553203375 },
+  ],
+};
+
+/** prazo + desconto aplicado (planilha: (1-5%), (1-6%), (1-8%)) */
+const LINHAS: Record<Bloco, { prazo: number; desc: number }[]> = {
+  "117": [
+    { prazo: 58, desc: 0.05 },
+    { prazo: 39, desc: 0.06 },
+    { prazo: 29, desc: 0.06 },
+    { prazo: 13, desc: 0.08 },
+  ],
+  "96": [
+    { prazo: 60, desc: 0.05 },
+    { prazo: 48, desc: 0.06 },
+    { prazo: 24, desc: 0.06 },
+    { prazo: 12, desc: 0.08 },
+  ],
+};
+
 const toNum = (s: string) => parseFloat((s || "").replace(/\./g, "").replace(",", ".")) || 0;
 
-/**
- * Reproduz a lógica da aba Ex1 da planilha de referência.
- * - Valor Liberado: parcela / coef_108 (único — mesmo valor para todos os cenários).
- * - 108x: parcela informada.
- * - 36x: média mensal = (36·P + Σ pv(k), k=1..108) / 36  →  P + Σ/36  (bloco Ex1 linhas 59–94).
- * - 54x: média mensal = (54·P + Σ pv(k), k=55..108) / 40             (bloco Ex1 linhas 98–151, M98 = J152/40).
- *   onde pv(k) = P / (1 + 0,02)^k.
- */
-function calcularCenarios(parcela: number, coef108: number) {
-  const pv = (k: number) => parcela / Math.pow(1 + TAXA_MENSAL, k);
-  const valorLiberado = coef108 > 0 ? parcela / coef108 : 0;
-
-  let soma108 = 0;
-  for (let k = 1; k <= 108; k++) soma108 += pv(k);
-  const parcela36 = parcela + soma108 / 36;
-
-  let soma54 = 0;
-  for (let k = 55; k <= 108; k++) soma54 += pv(k);
-  const parcela54 = (54 * parcela + soma54) / 40;
-
-  return [
-    { prazo: 108, parcela, valorLiberado },
-    { prazo: 54, parcela: parcela54, valorLiberado },
-    { prazo: 36, parcela: parcela36, valorLiberado },
-  ] as NovoEmprestimoOpcao[];
-}
-
-export function NovoEmprestimo() {
-  const { user, isAdmin } = useAuth();
+export function GovMa() {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [coefs, setCoefs] = useState<Coef[]>([]);
   const [cliente, setCliente] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [parcela, setParcela] = useState("");
+  const [bloco, setBloco] = useState<Bloco>("117");
+  const [taxa, setTaxa] = useState<number>(3.3);
+  const [cartao, setCartao] = useState("600,00");
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    (supabase.from("coefficients") as any)
-      .select("*")
-      .eq("modalidade", "novo_emprestimo")
-      .eq("prazo", 108)
-      .then(({ data }: any) => setCoefs((data as Coef[]) ?? []));
-  }, [user]);
+  const base = toNum(cartao);
+  const prazoBase = bloco === "117" ? 117 : 96;
+  const taxasDisponiveis = COEF[bloco];
+  const coefRow = taxasDisponiveis.find((t) => t.taxa === taxa);
 
-  const parcelaN = toNum(parcela);
-
-  // Melhor coeficiente de 108x cadastrado (menor = maior valor liberado).
-  const coef108 = useMemo(() => {
-    const v = coefs.filter((c) => Number(c.coeficiente) > 0);
-    if (v.length === 0) return 0;
-    return v.reduce((a, b) => (Number(a.coeficiente) < Number(b.coeficiente) ? a : b)).coeficiente;
-  }, [coefs]);
-
-  const opcoes = useMemo(() => calcularCenarios(parcelaN, Number(coef108)), [parcelaN, coef108]);
+  const opcoes: GovMaOpcao[] = useMemo(() => {
+    if (!coefRow || base <= 0) return [];
+    const i = taxa / 100;
+    const pv = (base * (1 - Math.pow(1 + i, -prazoBase))) / i;
+    const principal: GovMaOpcao = {
+      prazo: prazoBase,
+      parcela: base,
+      valorLiberado: base / coefRow.principal,
+    };
+    const demais = LINHAS[bloco].map(({ prazo, desc }) => ({
+      prazo,
+      parcela: ((pv * i) / (1 - Math.pow(1 + i, -prazo))) * (1 - desc),
+      valorLiberado: base / coefRow.demais,
+    }));
+    return [principal, ...demais];
+  }, [base, bloco, coefRow, prazoBase, taxa]);
 
   const valorLiberado = opcoes[0]?.valorLiberado ?? 0;
-  const faltaCoef = coef108 <= 0;
-  const canSimular = !!cliente && parcelaN > 0 && !faltaCoef;
+  const canSimular = !!cliente && base > 0 && !!coefRow && valorLiberado > 0;
+
+  const data = { cliente, taxa, base, opcoes };
+
+  const onBloco = (b: Bloco) => {
+    setBloco(b);
+    if (!COEF[b].some((t) => t.taxa === taxa)) setTaxa(COEF[b][0].taxa);
+  };
 
   const generatePng = async (): Promise<Blob> => {
     if (!cardRef.current) throw new Error("Cartão não encontrado");
@@ -88,14 +109,14 @@ export function NovoEmprestimo() {
 
   const handleSimular = () => {
     if (!cliente) return toast.error("Informe o nome do cliente.");
-    if (parcelaN <= 0) return toast.error("Informe o valor da parcela.");
-    if (faltaCoef) return toast.error("Cadastre o coeficiente de 108x para Novo LOAS.");
+    if (base <= 0) return toast.error("Informe o valor do Cartão Crédito.");
+    if (!coefRow) return toast.error("Selecione uma taxa válida.");
     setShowPreview(true);
-    setTimeout(() => document.getElementById("ne-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(() => document.getElementById("govma-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const handleSend = async () => {
-    if (!canSimular) return toast.error("Preencha os dados e verifique o coeficiente de 108x.");
+    if (!canSimular) return toast.error("Preencha os dados da simulação.");
     const phone = onlyDigits(telefone);
     if (phone.length < 10) return toast.error("Informe um WhatsApp válido.");
     setSending(true);
@@ -118,15 +139,17 @@ export function NovoEmprestimo() {
         toast.success("Imagem copiada!", { description: "Cole no WhatsApp (Ctrl+V)." });
       }
       const ddi = phone.length <= 11 ? `55${phone}` : phone;
-      const template = await fetchWhatsappTemplate("novo_emprestimo");
-      const msg = encodeURIComponent(renderWhatsappMessage(template, valorLiberado, { nome: cliente, parcela: parcelaN }));
+      const template = await fetchWhatsappTemplate("gov_ma");
+      const msg = encodeURIComponent(
+        renderWhatsappMessage(template, valorLiberado, { nome: cliente, parcela: opcoes[0]?.parcela ?? 0, prazo: prazoBase })
+      );
       await recordSimulation({
         cliente,
         telefone: phone,
-        modalidade: "novo_emprestimo",
+        modalidade: "gov_ma",
         valor_liberado: valorLiberado,
-        parcela: parcelaN,
-        prazo: 108,
+        parcela: opcoes[0]?.parcela ?? null,
+        prazo: prazoBase,
       });
       window.open(`https://wa.me/${ddi}?text=${msg}`, "_blank");
     } catch (e) {
@@ -170,42 +193,61 @@ export function NovoEmprestimo() {
               <Input value={telefone} onChange={(e) => setTelefone(formatPhoneBR(e.target.value))} className="h-11" placeholder="(11) 99999-9999" inputMode="numeric" />
             </Field>
           </div>
-          <div className="mt-3">
-            <Field label="Valor da parcela (margem disponível)">
-              <Input value={parcela} onChange={(e) => setParcela(e.target.value)} className="h-11" placeholder="567,35" inputMode="decimal" />
+
+          <div className="mt-4">
+            <Label className="text-xs font-semibold text-muted-foreground">Cálculo</Label>
+            <div className="mt-1.5 inline-flex rounded-xl bg-secondary p-1">
+              {(["117", "96"] as Bloco[]).map((b) => (
+                <button
+                  key={b}
+                  onClick={() => onBloco(b)}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    bloco === b ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {b}x
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Field label="Cartão Crédito">
+              <Input value={cartao} onChange={(e) => setCartao(e.target.value)} className="h-11" placeholder="600,00" inputMode="decimal" />
+            </Field>
+            <Field label="Taxa">
+              <div className="flex flex-wrap gap-1.5">
+                {taxasDisponiveis.map((t) => (
+                  <button
+                    key={t.taxa}
+                    onClick={() => setTaxa(t.taxa)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      taxa === t.taxa ? "border-brand bg-brand/10 text-brand" : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t.taxa.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}%
+                  </button>
+                ))}
+              </div>
             </Field>
           </div>
 
-          {faltaCoef && (
-            <div className="mt-4 rounded-xl border border-dashed border-amber/60 bg-amber/10 p-3 text-xs text-foreground">
-              Cadastre o coeficiente de <strong>108x</strong> em Novo LOAS. Os cenários de 54x e 36x são calculados pela lógica de antecipação (Ex1).
-            </div>
-          )}
-
-          {parcelaN > 0 && valorLiberado > 0 && (
+          {valorLiberado > 0 && (
             <>
               <div className="mt-5 rounded-xl border border-border bg-secondary/40 p-4 text-center">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Valor liberado</div>
                 <div className="mt-1 font-display text-2xl font-extrabold tabular-nums text-brand">{brl(valorLiberado)}</div>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-5 gap-2">
                 {opcoes.map((o) => (
                   <div key={o.prazo} className="rounded-xl border border-border bg-card p-3 text-center">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{o.prazo}x</div>
-                    <div className="mt-1 font-display text-base font-extrabold tabular-nums text-foreground">{brl(o.parcela)}</div>
+                    <div className="mt-1 font-display text-sm font-extrabold tabular-nums text-foreground">{brl(o.parcela)}</div>
                     <div className="text-[10px] text-muted-foreground">/mês</div>
                   </div>
                 ))}
               </div>
             </>
-          )}
-
-          <CommissionPanel modalidade="novo_emprestimo" valorBruto={valorLiberado} />
-
-          {isAdmin && parcelaN > 0 && (
-            <p className="mt-3 text-[10px] text-muted-foreground">
-              Cálculo (Ex1): VL = Parcela ÷ Coef108. Parcela 36x = P + Σ pv(1..108)/36. Parcela 54x = (54·P + Σ pv(55..108))/40. pv(k)=P/1,02ᵏ.
-            </p>
           )}
 
           <Button onClick={handleSimular} disabled={!canSimular} className="mt-5 h-14 w-full bg-primary text-base font-semibold text-primary-foreground shadow-elevated hover:bg-primary/90">
@@ -215,14 +257,14 @@ export function NovoEmprestimo() {
       </div>
 
       {/* Preview */}
-      <div id="ne-preview" className="space-y-4">
+      <div id="govma-preview" className="space-y-4">
         <div className="rounded-2xl bg-card p-5 shadow-soft md:p-6">
           <h2 className="font-display text-lg font-bold text-foreground">Pré-visualização</h2>
           <p className="mt-1 text-xs text-muted-foreground">É exatamente isso que o cliente vai receber.</p>
 
           <div className="mt-4 overflow-x-auto rounded-xl bg-secondary/40 p-3">
-            <div className="origin-top-left scale-[0.55] sm:scale-[0.6]" style={{ width: 720, height: 820 }}>
-              <NovoEmprestimoCard ref={cardRef} data={{ cliente, opcoes }} />
+            <div className="origin-top-left scale-[0.55] sm:scale-[0.6]" style={{ width: 720, height: 900 }}>
+              <GovMaCard ref={cardRef} data={data} />
             </div>
           </div>
 
