@@ -24,7 +24,7 @@ export interface SimulationRecord {
 export interface RecordSimulationInput {
   cliente: string;
   telefone: string;
-  modalidade: "refinanciamento" | "novo_emprestimo" | "novo_normal" | "portabilidade" | "gov_sp";
+  modalidade: "refinanciamento" | "novo_normal" | "portabilidade" | "gov_sp" | "gov_ma";
   valor_liberado: number;
   parcela?: number | null;
   prazo?: number | null;
@@ -56,10 +56,10 @@ export async function recordSimulation(input: RecordSimulationInput): Promise<vo
 
 export const MODALIDADE_LABEL: Record<string, string> = {
   refinanciamento: "Refinanciamento",
-  novo_emprestimo: "Novo LOAS",
   novo_normal: "Novo Normal",
   portabilidade: "Portabilidade",
   gov_sp: "Gov SP",
+  gov_ma: "Gov MA",
 };
 
 export async function fetchReactivationTemplate(): Promise<string> {
