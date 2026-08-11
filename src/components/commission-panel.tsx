@@ -8,7 +8,7 @@ interface Comm { id: string; percentual: number; modalidade: string; carencia: n
 interface SellerComm { id: string; user_id: string; percentual: number; modalidade: string; carencia: number | null; taxa: number | null; }
 
 interface Props {
-  modalidade: "novo_emprestimo" | "novo_normal";
+  modalidade: "novo_normal";
   carencia?: number | null;
   valorBruto: number;
 }
