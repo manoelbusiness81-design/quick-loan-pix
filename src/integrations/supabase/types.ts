@@ -90,6 +90,7 @@ export type Database = {
           modalidade: string
           owner_id: string
           percentual: number
+          prazo: number | null
           taxa: number | null
           team_id: string | null
           updated_at: string
@@ -101,6 +102,7 @@ export type Database = {
           modalidade?: string
           owner_id: string
           percentual: number
+          prazo?: number | null
           taxa?: number | null
           team_id?: string | null
           updated_at?: string
@@ -112,6 +114,7 @@ export type Database = {
           modalidade?: string
           owner_id?: string
           percentual?: number
+          prazo?: number | null
           taxa?: number | null
           team_id?: string | null
           updated_at?: string
@@ -154,6 +157,7 @@ export type Database = {
           id: string
           modalidade: string
           percentual: number
+          prazo: number | null
           taxa: number | null
           updated_at: string
           user_id: string
@@ -164,6 +168,7 @@ export type Database = {
           id?: string
           modalidade?: string
           percentual: number
+          prazo?: number | null
           taxa?: number | null
           updated_at?: string
           user_id: string
@@ -174,6 +179,7 @@ export type Database = {
           id?: string
           modalidade?: string
           percentual?: number
+          prazo?: number | null
           taxa?: number | null
           updated_at?: string
           user_id?: string
