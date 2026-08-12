@@ -18,10 +18,14 @@ export const Route = createFileRoute("/_authenticated/comissoes")({
   component: CommissionsPage,
 });
 
-type Modalidade = "refinanciamento" | "novo_normal";
+type Modalidade = "refinanciamento" | "novo_normal" | "portabilidade" | "gov_sp" | "gov_ma";
+const MODALIDADES: Modalidade[] = ["refinanciamento", "novo_normal", "portabilidade", "gov_sp", "gov_ma"];
 const MOD_LABEL: Record<Modalidade, string> = {
   refinanciamento: "Refinanciamento",
   novo_normal: "Novo Normal",
+  portabilidade: "Portabilidade",
+  gov_sp: "Gov SP",
+  gov_ma: "Gov MA",
 };
 const CARENCIAS = [
   { dias: 0, label: "Sem carência" },
