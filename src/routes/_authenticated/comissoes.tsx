@@ -18,10 +18,14 @@ export const Route = createFileRoute("/_authenticated/comissoes")({
   component: CommissionsPage,
 });
 
-type Modalidade = "refinanciamento" | "novo_normal";
+type Modalidade = "refinanciamento" | "novo_normal" | "portabilidade" | "gov_sp" | "gov_ma";
+const MODALIDADES: Modalidade[] = ["refinanciamento", "novo_normal", "portabilidade", "gov_sp", "gov_ma"];
 const MOD_LABEL: Record<Modalidade, string> = {
   refinanciamento: "Refinanciamento",
   novo_normal: "Novo Normal",
+  portabilidade: "Portabilidade",
+  gov_sp: "Gov SP",
+  gov_ma: "Gov MA",
 };
 const CARENCIAS = [
   { dias: 0, label: "Sem carência" },
@@ -47,7 +51,7 @@ function CommissionsPage() {
       </div>
 
       <div className="inline-flex rounded-xl bg-secondary p-1">
-        {(["refinanciamento", "novo_normal"] as Modalidade[]).map((m) => (
+        {MODALIDADES.map((m) => (
           <button
             key={m}
             onClick={() => setMod(m)}
@@ -140,6 +144,7 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
         <p className="text-sm text-muted-foreground">
           {mod === "refinanciamento" && "Comissão total da empresa, por taxa."}
           {mod === "novo_normal" && "Comissão da empresa por tabela de carência (Sem carência, 30, 60 e 90 dias)."}
+          {mod !== "refinanciamento" && mod !== "novo_normal" && `Comissão total da empresa para ${MOD_LABEL[mod]}.`}
         </p>
         <Button onClick={openNew} className="h-10 bg-gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
           <Plus className="mr-2 h-4 w-4" /> Nova comissão
@@ -391,10 +396,9 @@ function VendorView({ userId }: { userId: string }) {
       .then(({ data }: any) => setList((data as SellerComm[]) ?? []));
   }, [userId]);
 
-  const grouped: Record<Modalidade, SellerComm[]> = {
-    refinanciamento: list.filter(s => s.modalidade === "refinanciamento"),
-    novo_normal: list.filter(s => s.modalidade === "novo_normal"),
-  };
+  const grouped = Object.fromEntries(
+    MODALIDADES.map((m) => [m, list.filter((s) => s.modalidade === m)])
+  ) as Record<Modalidade, SellerComm[]>;
 
   return (
     <div className="space-y-6">
@@ -409,7 +413,7 @@ function VendorView({ userId }: { userId: string }) {
         </div>
       )}
 
-      {(["refinanciamento", "novo_normal"] as Modalidade[]).map((m) => {
+      {MODALIDADES.map((m) => {
         const rows = grouped[m];
         if (rows.length === 0) return null;
         const showTaxa = m === "refinanciamento";

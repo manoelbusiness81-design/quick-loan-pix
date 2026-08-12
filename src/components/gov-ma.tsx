@@ -40,6 +40,22 @@ const COEF: Record<Bloco, { taxa: number; principal: number; demais: number }[]>
   ],
 };
 
+/** Coeficientes próprios do Cartão Benefício (planilha) — independentes do Cartão Crédito. */
+const COEF_BENEF: Record<Bloco, { taxa: number; coef: number }[]> = {
+  "117": [
+    { taxa: 2.9, coef: 0.0404869475841648 },
+    { taxa: 3.25, coef: 0.0455107986784606 },
+    { taxa: 3.3, coef: 0.0521910879344688 },
+  ],
+  "96": [
+    { taxa: 2.9, coef: 0.0411738143404302 },
+    { taxa: 3.15, coef: 0.0411738143404302 },
+    { taxa: 3.25, coef: 0.0455107986784606 },
+    { taxa: 3.3, coef: 0.0521910879344688 },
+    { taxa: 3.4, coef: 0.0474153553203375 },
+  ],
+};
+
 /** prazo + desconto aplicado (planilha: (1-5%), (1-6%), (1-8%)) */
 const LINHAS: Record<Bloco, { prazo: number; desc: number }[]> = {
   "117": [
@@ -65,30 +81,47 @@ export function GovMa() {
   const [bloco, setBloco] = useState<Bloco>("117");
   const [taxa, setTaxa] = useState<number>(3.3);
   const [cartao, setCartao] = useState("600,00");
+  const [beneficio, setBeneficio] = useState("");
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const base = toNum(cartao);
+  const baseCredito = toNum(cartao);
+  const baseBeneficio = toNum(beneficio);
+  const base = baseCredito + baseBeneficio;
   const prazoBase = bloco === "117" ? 117 : 96;
   const taxasDisponiveis = COEF[bloco];
   const coefRow = taxasDisponiveis.find((t) => t.taxa === taxa);
+  const coefBenef = COEF_BENEF[bloco].find((t) => t.taxa === taxa);
 
   const opcoes: GovMaOpcao[] = useMemo(() => {
     if (!coefRow || base <= 0) return [];
     const i = taxa / 100;
-    const pv = (base * (1 - Math.pow(1 + i, -prazoBase))) / i;
-    const principal: GovMaOpcao = {
-      prazo: prazoBase,
-      parcela: base,
-      valorLiberado: base / coefRow.principal,
+
+    /** Mesma lógica/antecipação já existente, aplicada a cada produto isoladamente. */
+    const calc = (valorParcela: number, coefPrincipal: number, coefDemais: number): GovMaOpcao[] => {
+      if (valorParcela <= 0) return [];
+      const pv = (valorParcela * (1 - Math.pow(1 + i, -prazoBase))) / i;
+      return [
+        { prazo: prazoBase, parcela: valorParcela, valorLiberado: valorParcela / coefPrincipal },
+        ...LINHAS[bloco].map(({ prazo, desc }) => ({
+          prazo,
+          parcela: ((pv * i) / (1 - Math.pow(1 + i, -prazo))) * (1 - desc),
+          valorLiberado: valorParcela / coefDemais,
+        })),
+      ];
     };
-    const demais = LINHAS[bloco].map(({ prazo, desc }) => ({
-      prazo,
-      parcela: ((pv * i) / (1 - Math.pow(1 + i, -prazo))) * (1 - desc),
-      valorLiberado: base / coefRow.demais,
+
+    const credito = calc(baseCredito, coefRow.principal, coefRow.demais);
+    const benef = coefBenef ? calc(baseBeneficio, coefBenef.coef, coefBenef.coef) : [];
+
+    if (benef.length === 0) return credito;
+    if (credito.length === 0) return benef;
+    return credito.map((c, idx) => ({
+      prazo: c.prazo,
+      parcela: c.parcela + (benef[idx]?.parcela ?? 0),
+      valorLiberado: c.valorLiberado + (benef[idx]?.valorLiberado ?? 0),
     }));
-    return [principal, ...demais];
-  }, [base, bloco, coefRow, prazoBase, taxa]);
+  }, [base, baseCredito, baseBeneficio, bloco, coefRow, coefBenef, prazoBase, taxa]);
 
   const valorLiberado = opcoes[0]?.valorLiberado ?? 0;
   const canSimular = !!cliente && base > 0 && !!coefRow && valorLiberado > 0;
@@ -109,7 +142,7 @@ export function GovMa() {
 
   const handleSimular = () => {
     if (!cliente) return toast.error("Informe o nome do cliente.");
-    if (base <= 0) return toast.error("Informe o valor do Cartão Crédito.");
+    if (base <= 0) return toast.error("Informe o valor do Cartão Crédito e/ou do Cartão Benefício.");
     if (!coefRow) return toast.error("Selecione uma taxa válida.");
     setShowPreview(true);
     setTimeout(() => document.getElementById("govma-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
@@ -212,9 +245,14 @@ export function GovMa() {
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <Field label="Cartão Crédito">
-              <Input value={cartao} onChange={(e) => setCartao(e.target.value)} className="h-11" placeholder="600,00" inputMode="decimal" />
-            </Field>
+            <div className="space-y-3">
+              <Field label="Cartão Crédito">
+                <Input value={cartao} onChange={(e) => setCartao(e.target.value)} className="h-11" placeholder="600,00" inputMode="decimal" />
+              </Field>
+              <Field label="Cartão Benefício">
+                <Input value={beneficio} onChange={(e) => setBeneficio(e.target.value)} className="h-11" placeholder="0,00" inputMode="decimal" />
+              </Field>
+            </div>
             <Field label="Taxa">
               <div className="flex flex-wrap gap-1.5">
                 {taxasDisponiveis.map((t) => (
