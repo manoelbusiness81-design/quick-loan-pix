@@ -51,7 +51,7 @@ function CommissionsPage() {
       </div>
 
       <div className="inline-flex rounded-xl bg-secondary p-1">
-        {(["refinanciamento", "novo_normal"] as Modalidade[]).map((m) => (
+        {MODALIDADES.map((m) => (
           <button
             key={m}
             onClick={() => setMod(m)}
@@ -395,10 +395,9 @@ function VendorView({ userId }: { userId: string }) {
       .then(({ data }: any) => setList((data as SellerComm[]) ?? []));
   }, [userId]);
 
-  const grouped: Record<Modalidade, SellerComm[]> = {
-    refinanciamento: list.filter(s => s.modalidade === "refinanciamento"),
-    novo_normal: list.filter(s => s.modalidade === "novo_normal"),
-  };
+  const grouped = Object.fromEntries(
+    MODALIDADES.map((m) => [m, list.filter((s) => s.modalidade === m)])
+  ) as Record<Modalidade, SellerComm[]>;
 
   return (
     <div className="space-y-6">
@@ -413,7 +412,7 @@ function VendorView({ userId }: { userId: string }) {
         </div>
       )}
 
-      {(["refinanciamento", "novo_normal"] as Modalidade[]).map((m) => {
+      {MODALIDADES.map((m) => {
         const rows = grouped[m];
         if (rows.length === 0) return null;
         const showTaxa = m === "refinanciamento";
