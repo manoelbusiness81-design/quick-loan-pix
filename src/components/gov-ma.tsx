@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import { Send, Sparkles, Loader2, Copy, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { GovMaCard, type GovMaOpcao } from "./gov-ma-card";
 import { fetchWhatsappTemplate, renderWhatsappMessage } from "@/lib/whatsapp";
 import { recordSimulation } from "@/lib/simulations";
+import { supabase } from "@/integrations/supabase/client";
+import { CommissionPanel } from "./commission-panel";
 
 /**
  * GOV MA — réplica exata da planilha "Simulador GOV MA".
