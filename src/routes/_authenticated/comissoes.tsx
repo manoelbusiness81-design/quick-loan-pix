@@ -34,8 +34,8 @@ const CARENCIAS = [
   { dias: 90, label: "90 dias" },
 ] as const;
 
-interface Comm { id: string; taxa: number | null; percentual: number; modalidade: Modalidade; carencia: number | null; }
-interface SellerComm { id: string; user_id: string; taxa: number | null; percentual: number; modalidade: Modalidade; carencia: number | null; }
+interface Comm { id: string; taxa: number | null; percentual: number; modalidade: Modalidade; carencia: number | null; prazo: number | null; }
+interface SellerComm { id: string; user_id: string; taxa: number | null; percentual: number; modalidade: Modalidade; carencia: number | null; prazo: number | null; }
 interface SimpleUser { id: string; email: string; full_name: string | null; roles: string[] }
 
 function CommissionsPage() {
@@ -82,7 +82,7 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
   const [list, setList] = useState<Comm[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Comm | null>(null);
-  const [form, setForm] = useState({ taxa: "", percentual: "", carencia: "0" });
+  const [form, setForm] = useState({ taxa: "", percentual: "", carencia: "0", prazo: "117" });
   const [saving, setSaving] = useState(false);
 
   const load = () =>
@@ -94,13 +94,14 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
       .then(({ data }: any) => setList((data as Comm[]) ?? []));
   useEffect(() => { load(); }, [mod]);
 
-  const openNew = () => { setEditing(null); setForm({ taxa: "", percentual: "", carencia: "0" }); setOpen(true); };
+  const openNew = () => { setEditing(null); setForm({ taxa: "", percentual: "", carencia: "0", prazo: "117" }); setOpen(true); };
   const openEdit = (c: Comm) => {
     setEditing(c);
     setForm({
       taxa: c.taxa != null ? String(c.taxa).replace(".", ",") : "",
       percentual: String(c.percentual).replace(".", ","),
       carencia: c.carencia != null ? String(c.carencia) : "0",
+      prazo: c.prazo != null ? String(c.prazo) : "117",
     });
     setOpen(true);
   };
@@ -108,13 +109,14 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
   const save = async () => {
     if (!user) return;
     if (!form.percentual) { toast.error("Informe o percentual."); return; }
-    if (mod === "refinanciamento" && !form.taxa) { toast.error("Informe a taxa."); return; }
+    if ((mod === "refinanciamento" || mod === "gov_ma") && !form.taxa) { toast.error("Informe a taxa."); return; }
     setSaving(true);
     const payload: any = {
-      taxa: mod === "refinanciamento" ? parseFloat(form.taxa.replace(",", ".")) : null,
+      taxa: mod === "refinanciamento" || mod === "gov_ma" ? parseFloat(form.taxa.replace(",", ".")) : null,
       percentual: parseFloat(form.percentual.replace(",", ".")),
       modalidade: mod,
       carencia: mod === "novo_normal" ? parseInt(form.carencia) : null,
+      prazo: mod === "gov_ma" ? parseInt(form.prazo) : null,
       owner_id: user.id,
       // Master Admin saves as global (NULL); supervisor saves under their team.
       team_id: isMasterAdmin ? null : (teamId ?? null),
@@ -135,8 +137,9 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
     toast.success("Excluído"); load();
   };
 
-  const showTaxa = mod === "refinanciamento";
+  const showTaxa = mod === "refinanciamento" || mod === "gov_ma";
   const showCarencia = mod === "novo_normal";
+  const showPrazo = mod === "gov_ma";
 
   return (
     <div className="space-y-4">
@@ -144,7 +147,8 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
         <p className="text-sm text-muted-foreground">
           {mod === "refinanciamento" && "Comissão total da empresa, por taxa."}
           {mod === "novo_normal" && "Comissão da empresa por tabela de carência (Sem carência, 30, 60 e 90 dias)."}
-          {mod !== "refinanciamento" && mod !== "novo_normal" && `Comissão total da empresa para ${MOD_LABEL[mod]}.`}
+          {mod === "gov_ma" && "Comissão da empresa por taxa e prazo (117x / 96x)."}
+          {mod !== "refinanciamento" && mod !== "novo_normal" && mod !== "gov_ma" && `Comissão total da empresa para ${MOD_LABEL[mod]}.`}
         </p>
         <Button onClick={openNew} className="h-10 bg-gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
           <Plus className="mr-2 h-4 w-4" /> Nova comissão
@@ -160,6 +164,7 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
                 <tr>
                   {showTaxa && <th className="px-5 py-3 text-left">Taxa</th>}
                   {showCarencia && <th className="px-5 py-3 text-left">Tabela</th>}
+                  {showPrazo && <th className="px-5 py-3 text-left">Prazo</th>}
                   <th className="px-5 py-3 text-left">Comissão empresa</th>
                   <th className="px-5 py-3 text-right">Ações</th>
                 </tr>
@@ -169,6 +174,7 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
                   <tr key={c.id} className="border-b border-border/60 last:border-0">
                     {showTaxa && <td className="px-5 py-3 font-medium tabular-nums">{c.taxa != null ? pct(Number(c.taxa)) : "—"}</td>}
                     {showCarencia && <td className="px-5 py-3 font-medium">{CARENCIAS.find(x => x.dias === c.carencia)?.label ?? "—"}</td>}
+                    {showPrazo && <td className="px-5 py-3 tabular-nums">{c.prazo != null ? `${c.prazo}x` : "—"}</td>}
                     <td className="px-5 py-3 font-display font-semibold tabular-nums text-brand">{pct(Number(c.percentual), 3)}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="inline-flex gap-1">
@@ -202,7 +208,19 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
                 </Select>
               </div>
             )}
-            <div className={showTaxa || showCarencia ? "" : "col-span-2"}>
+            {showPrazo && (
+              <div>
+                <Label>Prazo</Label>
+                <Select value={form.prazo} onValueChange={(v) => setForm({ ...form, prazo: v })}>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="117">117x</SelectItem>
+                    <SelectItem value="96">96x</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className={showTaxa || showCarencia || showPrazo ? "" : "col-span-2"}>
               <Label>Comissão empresa (%)</Label>
               <Input value={form.percentual} onChange={(e) => setForm({ ...form, percentual: e.target.value })} className="h-11" placeholder="8,000" inputMode="decimal" />
             </div>
@@ -226,7 +244,7 @@ function SellerCommissions({ mod }: { mod: Modalidade }) {
   const [list, setList] = useState<SellerComm[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SellerComm | null>(null);
-  const [form, setForm] = useState({ user_id: "", taxa: "", percentual: "", carencia: "0" });
+  const [form, setForm] = useState({ user_id: "", taxa: "", percentual: "", carencia: "0", prazo: "117" });
   const [saving, setSaving] = useState(false);
 
   const loadAll = async () => {
@@ -245,7 +263,7 @@ function SellerCommissions({ mod }: { mod: Modalidade }) {
     return u ? (u.full_name || u.email) : id.slice(0, 8);
   };
 
-  const openNew = () => { setEditing(null); setForm({ user_id: "", taxa: "", percentual: "", carencia: "0" }); setOpen(true); };
+  const openNew = () => { setEditing(null); setForm({ user_id: "", taxa: "", percentual: "", carencia: "0", prazo: "117" }); setOpen(true); };
   const openEdit = (s: SellerComm) => {
     setEditing(s);
     setForm({
@@ -253,20 +271,22 @@ function SellerCommissions({ mod }: { mod: Modalidade }) {
       taxa: s.taxa != null ? String(s.taxa).replace(".", ",") : "",
       percentual: String(s.percentual).replace(".", ","),
       carencia: s.carencia != null ? String(s.carencia) : "0",
+      prazo: s.prazo != null ? String(s.prazo) : "117",
     });
     setOpen(true);
   };
 
   const save = async () => {
     if (!form.user_id || !form.percentual) { toast.error("Preencha todos os campos."); return; }
-    if (mod === "refinanciamento" && !form.taxa) { toast.error("Informe a taxa."); return; }
+    if ((mod === "refinanciamento" || mod === "gov_ma") && !form.taxa) { toast.error("Informe a taxa."); return; }
     setSaving(true);
     const payload: any = {
       user_id: form.user_id,
-      taxa: mod === "refinanciamento" ? parseFloat(form.taxa.replace(",", ".")) : null,
+      taxa: mod === "refinanciamento" || mod === "gov_ma" ? parseFloat(form.taxa.replace(",", ".")) : null,
       percentual: parseFloat(form.percentual.replace(",", ".")),
       modalidade: mod,
       carencia: mod === "novo_normal" ? parseInt(form.carencia) : null,
+      prazo: mod === "gov_ma" ? parseInt(form.prazo) : null,
     };
     const tbl = (supabase.from as any)("seller_commissions");
     const { error } = editing
@@ -285,8 +305,9 @@ function SellerCommissions({ mod }: { mod: Modalidade }) {
     toast.success("Excluído"); loadAll();
   };
 
-  const showTaxa = mod === "refinanciamento";
+  const showTaxa = mod === "refinanciamento" || mod === "gov_ma";
   const showCarencia = mod === "novo_normal";
+  const showPrazo = mod === "gov_ma";
 
   return (
     <div className="space-y-4">
@@ -309,6 +330,7 @@ function SellerCommissions({ mod }: { mod: Modalidade }) {
                   <th className="px-5 py-3 text-left">Vendedor</th>
                   {showTaxa && <th className="px-5 py-3 text-left">Taxa</th>}
                   {showCarencia && <th className="px-5 py-3 text-left">Tabela</th>}
+                  {showPrazo && <th className="px-5 py-3 text-left">Prazo</th>}
                   <th className="px-5 py-3 text-left">% Vendedor</th>
                   <th className="px-5 py-3 text-right">Ações</th>
                 </tr>
@@ -319,6 +341,7 @@ function SellerCommissions({ mod }: { mod: Modalidade }) {
                     <td className="px-5 py-3 font-medium text-foreground">{userName(s.user_id)}</td>
                     {showTaxa && <td className="px-5 py-3 tabular-nums">{s.taxa != null ? pct(Number(s.taxa)) : "—"}</td>}
                     {showCarencia && <td className="px-5 py-3">{CARENCIAS.find(x => x.dias === s.carencia)?.label ?? "—"}</td>}
+                    {showPrazo && <td className="px-5 py-3 tabular-nums">{s.prazo != null ? `${s.prazo}x` : "—"}</td>}
                     <td className="px-5 py-3 font-display font-semibold tabular-nums text-brand">{pct(Number(s.percentual), 3)}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="inline-flex gap-1">
@@ -364,7 +387,19 @@ function SellerCommissions({ mod }: { mod: Modalidade }) {
                   </Select>
                 </div>
               )}
-              <div className={showTaxa || showCarencia ? "" : "col-span-2"}>
+            {showPrazo && (
+                <div>
+                  <Label>Prazo</Label>
+                  <Select value={form.prazo} onValueChange={(v) => setForm({ ...form, prazo: v })}>
+                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="117">117x</SelectItem>
+                      <SelectItem value="96">96x</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className={showTaxa || showCarencia || showPrazo ? "" : "col-span-2"}>
                 <Label>% Vendedor</Label>
                 <Input value={form.percentual} onChange={(e) => setForm({ ...form, percentual: e.target.value })} className="h-11" placeholder="3,000" inputMode="decimal" />
               </div>
@@ -427,6 +462,7 @@ function VendorView({ userId }: { userId: string }) {
                   <tr>
                     {showTaxa && <th className="px-5 py-3 text-left">Taxa</th>}
                     {showCarencia && <th className="px-5 py-3 text-left">Tabela</th>}
+                  {showPrazo && <th className="px-5 py-3 text-left">Prazo</th>}
                     {!showTaxa && !showCarencia && <th className="px-5 py-3 text-left">Produto</th>}
                     <th className="px-5 py-3 text-left">Minha comissão</th>
                   </tr>
@@ -436,6 +472,7 @@ function VendorView({ userId }: { userId: string }) {
                     <tr key={s.id} className="border-b border-border/60 last:border-0">
                       {showTaxa && <td className="px-5 py-3 tabular-nums">{s.taxa != null ? pct(Number(s.taxa)) : "—"}</td>}
                       {showCarencia && <td className="px-5 py-3">{CARENCIAS.find(x => x.dias === s.carencia)?.label ?? "—"}</td>}
+                    {showPrazo && <td className="px-5 py-3 tabular-nums">{s.prazo != null ? `${s.prazo}x` : "—"}</td>}
                       {!showTaxa && !showCarencia && <td className="px-5 py-3">{MOD_LABEL[m]}</td>}
                       <td className="px-5 py-3 font-display font-semibold tabular-nums text-brand">{pct(Number(s.percentual), 3)}</td>
                     </tr>
