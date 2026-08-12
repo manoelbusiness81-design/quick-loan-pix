@@ -27,36 +27,36 @@ import { CommissionPanel } from "./commission-panel";
 
 type Bloco = "117" | "96";
 
-const COEF: Record<Bloco, { taxa: number; principal: number; demais: number }[]> = {
-  "117": [
-    { taxa: 2.9, principal: 0.0404869475841648, demais: 0.0404869475841648 },
-    { taxa: 3.25, principal: 0.0449172110089976, demais: 0.0455107986784606 },
-    { taxa: 3.3, principal: 0.0521910879344688, demais: 0.0521910879344688 },
-  ],
-  "96": [
-    { taxa: 2.9, principal: 0.0411738143404302, demais: 0.0411738143404302 },
-    { taxa: 3.15, principal: 0.0442559498674855, demais: 0.0411738143404302 },
-    { taxa: 3.25, principal: 0.0455107986784606, demais: 0.0455107986784606 },
-    { taxa: 3.3, principal: 0.0521910879344688, demais: 0.0521910879344688 },
-    { taxa: 3.4, principal: 0.0474153553203375, demais: 0.0474153553203375 },
-  ],
-};
+interface CoefRow { bank: string; prazo: number; taxa: number; coeficiente: number }
 
-/** Coeficientes próprios do Cartão Benefício (planilha) — independentes do Cartão Crédito. */
-const COEF_BENEF: Record<Bloco, { taxa: number; coef: number }[]> = {
-  "117": [
-    { taxa: 2.9, coef: 0.0404869475841648 },
-    { taxa: 3.25, coef: 0.0455107986784606 },
-    { taxa: 3.3, coef: 0.0521910879344688 },
-  ],
-  "96": [
-    { taxa: 2.9, coef: 0.0411738143404302 },
-    { taxa: 3.15, coef: 0.0411738143404302 },
-    { taxa: 3.25, coef: 0.0455107986784606 },
-    { taxa: 3.3, coef: 0.0521910879344688 },
-    { taxa: 3.4, coef: 0.0474153553203375 },
-  ],
-};
+export const BANK_CREDITO = "Cartão Crédito";
+export const BANK_CREDITO_DEMAIS = "Cartão Crédito (demais prazos)";
+export const BANK_BENEFICIO = "Cartão Benefício";
+
+type TaxaCoef = { taxa: number; principal: number; demais: number };
+
+/** Monta as tabelas (por bloco/prazo) a partir dos coeficientes cadastrados no OCTA. */
+function buildTables(rows: CoefRow[]) {
+  const credito: Record<Bloco, TaxaCoef[]> = { "117": [], "96": [] };
+  const benef: Record<Bloco, { taxa: number; coef: number }[]> = { "117": [], "96": [] };
+  for (const b of ["117", "96"] as Bloco[]) {
+    const prazo = b === "117" ? 117 : 96;
+    const ofBloco = rows.filter((r) => Number(r.prazo) === prazo);
+    const taxas = Array.from(new Set(ofBloco.map((r) => Number(r.taxa)))).sort((a, z) => a - z);
+    for (const t of taxas) {
+      const principal = ofBloco.find((r) => r.bank === BANK_CREDITO && Number(r.taxa) === t);
+      const demais = ofBloco.find((r) => r.bank === BANK_CREDITO_DEMAIS && Number(r.taxa) === t);
+      if (principal || demais) {
+        const p = Number(principal?.coeficiente ?? demais?.coeficiente);
+        credito[b].push({ taxa: t, principal: p, demais: Number(demais?.coeficiente ?? p) });
+      }
+      const bn = ofBloco.find((r) => r.bank === BANK_BENEFICIO && Number(r.taxa) === t);
+      if (bn) benef[b].push({ taxa: t, coef: Number(bn.coeficiente) });
+    }
+  }
+  return { credito, benef };
+}
+
 
 /** prazo + desconto aplicado (planilha: (1-5%), (1-6%), (1-8%)) */
 const LINHAS: Record<Bloco, { prazo: number; desc: number }[]> = {
