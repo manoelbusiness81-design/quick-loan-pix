@@ -69,7 +69,7 @@ export const GovMaCard = forwardRef<HTMLDivElement, { data: GovMaCardData }>(({ 
             Opções de prazo
           </div>
           <div className="text-[10px] font-semibold text-muted-foreground">
-            Cartão Crédito {brl(data.base)}
+            Parcela base {brl(data.base)}
           </div>
         </div>
         <div className="overflow-hidden rounded-xl border border-border">
