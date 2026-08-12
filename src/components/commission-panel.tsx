@@ -18,7 +18,7 @@ interface Props {
 }
 
 /** Card "MINHA COMISSÃO" — mesmo padrão visual do Refinanciamento. */
-export function CommissionPanel({ modalidade, carencia = null, valorBruto }: Props) {
+export function CommissionPanel({ modalidade, carencia = null, taxa = null, prazo = null, valorBruto }: Props) {
   const { user, isAdmin } = useAuth();
   const [comms, setComms] = useState<Comm[]>([]);
   const [sellerComms, setSellerComms] = useState<SellerComm[]>([]);
@@ -38,11 +38,17 @@ export function CommissionPanel({ modalidade, carencia = null, valorBruto }: Pro
       .then(({ data }: any) => setSellerComms((data as SellerComm[]) ?? []));
   }, [user, isAdmin, modalidade]);
 
-  const matchCarencia = (c: Comm | SellerComm) =>
-    modalidade === "novo_normal" ? Number(c.carencia ?? -1) === Number(carencia ?? -1) : true;
+  const near = (a: number | null | undefined, b: number | null | undefined) =>
+    Math.abs(Number(a ?? -1) - Number(b ?? -1)) < 0.0001;
 
-  const commCfg = useMemo(() => comms.find(matchCarencia), [comms, carencia, modalidade]);
-  const sellerCfg = useMemo(() => sellerComms.find(matchCarencia), [sellerComms, carencia, modalidade]);
+  const match = (c: Comm | SellerComm) =>
+    modalidade === "novo_normal"
+      ? Number(c.carencia ?? -1) === Number(carencia ?? -1)
+      : near(c.taxa, taxa) && Number(c.prazo ?? -1) === Number(prazo ?? -1);
+
+  const commCfg = useMemo(() => comms.find(match), [comms, carencia, taxa, prazo, modalidade]);
+  const sellerCfg = useMemo(() => sellerComms.find(match), [sellerComms, carencia, taxa, prazo, modalidade]);
+
 
   const comissaoPct = commCfg ? Number(commCfg.percentual) : 0;
   const comissaoValor = (valorBruto * comissaoPct) / 100;
