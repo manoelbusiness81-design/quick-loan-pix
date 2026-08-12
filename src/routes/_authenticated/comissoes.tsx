@@ -451,8 +451,9 @@ function VendorView({ userId }: { userId: string }) {
       {MODALIDADES.map((m) => {
         const rows = grouped[m];
         if (rows.length === 0) return null;
-        const showTaxa = m === "refinanciamento";
+        const showTaxa = m === "refinanciamento" || m === "gov_ma";
         const showCarencia = m === "novo_normal";
+        const showPrazo = m === "gov_ma";
         return (
           <div key={m} className="rounded-2xl bg-card shadow-soft">
             <div className="border-b border-border px-5 py-3 font-display text-sm font-bold text-foreground">{MOD_LABEL[m]}</div>
@@ -463,7 +464,7 @@ function VendorView({ userId }: { userId: string }) {
                     {showTaxa && <th className="px-5 py-3 text-left">Taxa</th>}
                     {showCarencia && <th className="px-5 py-3 text-left">Tabela</th>}
                   {showPrazo && <th className="px-5 py-3 text-left">Prazo</th>}
-                    {!showTaxa && !showCarencia && <th className="px-5 py-3 text-left">Produto</th>}
+                    {!showTaxa && !showCarencia && !showPrazo && <th className="px-5 py-3 text-left">Produto</th>}
                     <th className="px-5 py-3 text-left">Minha comissão</th>
                   </tr>
                 </thead>
@@ -473,7 +474,7 @@ function VendorView({ userId }: { userId: string }) {
                       {showTaxa && <td className="px-5 py-3 tabular-nums">{s.taxa != null ? pct(Number(s.taxa)) : "—"}</td>}
                       {showCarencia && <td className="px-5 py-3">{CARENCIAS.find(x => x.dias === s.carencia)?.label ?? "—"}</td>}
                     {showPrazo && <td className="px-5 py-3 tabular-nums">{s.prazo != null ? `${s.prazo}x` : "—"}</td>}
-                      {!showTaxa && !showCarencia && <td className="px-5 py-3">{MOD_LABEL[m]}</td>}
+                      {!showTaxa && !showCarencia && !showPrazo && <td className="px-5 py-3">{MOD_LABEL[m]}</td>}
                       <td className="px-5 py-3 font-display font-semibold tabular-nums text-brand">{pct(Number(s.percentual), 3)}</td>
                     </tr>
                   ))}
