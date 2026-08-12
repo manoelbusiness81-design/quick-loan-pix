@@ -300,7 +300,9 @@ export function GovMa() {
                   </div>
                 ))}
               </div>
+              <CommissionPanel modalidade="gov_ma" taxa={taxa} prazo={prazoBase} valorBruto={valorLiberado} />
             </>
+
           )}
 
           <Button onClick={handleSimular} disabled={!canSimular} className="mt-5 h-14 w-full bg-primary text-base font-semibold text-primary-foreground shadow-elevated hover:bg-primary/90">
