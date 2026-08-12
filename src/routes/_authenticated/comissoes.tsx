@@ -144,6 +144,7 @@ function CompanyCommissions({ mod }: { mod: Modalidade }) {
         <p className="text-sm text-muted-foreground">
           {mod === "refinanciamento" && "Comissão total da empresa, por taxa."}
           {mod === "novo_normal" && "Comissão da empresa por tabela de carência (Sem carência, 30, 60 e 90 dias)."}
+          {mod !== "refinanciamento" && mod !== "novo_normal" && `Comissão total da empresa para ${MOD_LABEL[mod]}.`}
         </p>
         <Button onClick={openNew} className="h-10 bg-gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
           <Plus className="mr-2 h-4 w-4" /> Nova comissão
