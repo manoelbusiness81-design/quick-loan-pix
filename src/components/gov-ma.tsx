@@ -143,7 +143,9 @@ export function GovMa() {
 
   const onBloco = (b: Bloco) => {
     setBloco(b);
-    if (!COEF[b].some((t) => t.taxa === taxa)) setTaxa(COEF[b][0].taxa);
+    const list = tables.credito[b];
+    if (list.length && !list.some((t) => t.taxa === taxa)) setTaxa(list[0].taxa);
+
   };
 
   const generatePng = async (): Promise<Blob> => {
