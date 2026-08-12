@@ -86,14 +86,25 @@ export function GovMa() {
   const [beneficio, setBeneficio] = useState("");
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [rows, setRows] = useState<CoefRow[]>([]);
+
+  useEffect(() => {
+    (supabase.from("coefficients") as any)
+      .select("bank,prazo,taxa,coeficiente")
+      .eq("modalidade", "gov_ma")
+      .then(({ data }: any) => setRows((data as CoefRow[]) ?? []));
+  }, []);
+
+  const tables = useMemo(() => buildTables(rows), [rows]);
 
   const baseCredito = toNum(cartao);
   const baseBeneficio = toNum(beneficio);
   const base = baseCredito + baseBeneficio;
   const prazoBase = bloco === "117" ? 117 : 96;
-  const taxasDisponiveis = COEF[bloco];
+  const taxasDisponiveis = tables.credito[bloco];
   const coefRow = taxasDisponiveis.find((t) => t.taxa === taxa);
-  const coefBenef = COEF_BENEF[bloco].find((t) => t.taxa === taxa);
+  const coefBenef = tables.benef[bloco].find((t) => t.taxa === taxa);
+
 
   const opcoes: GovMaOpcao[] = useMemo(() => {
     if (!coefRow || base <= 0) return [];
