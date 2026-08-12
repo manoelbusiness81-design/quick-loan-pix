@@ -4,12 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { brl, pct } from "@/lib/format";
 
-interface Comm { id: string; percentual: number; modalidade: string; carencia: number | null; taxa: number | null; }
-interface SellerComm { id: string; user_id: string; percentual: number; modalidade: string; carencia: number | null; taxa: number | null; }
+interface Comm { id: string; percentual: number; modalidade: string; carencia: number | null; taxa: number | null; prazo: number | null; }
+interface SellerComm { id: string; user_id: string; percentual: number; modalidade: string; carencia: number | null; taxa: number | null; prazo: number | null; }
 
 interface Props {
-  modalidade: "novo_normal";
+  modalidade: "novo_normal" | "gov_ma";
   carencia?: number | null;
+  /** Gov MA: taxa selecionada (%) */
+  taxa?: number | null;
+  /** Gov MA: prazo selecionado */
+  prazo?: number | null;
   valorBruto: number;
 }
 
