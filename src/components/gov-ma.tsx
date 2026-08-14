@@ -261,7 +261,7 @@ export function GovMa() {
 
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div className="space-y-3">
-              <Field label="Cartão Crédito">
+              <Field label="Cartão Consignado">
                 <Input value={cartao} onChange={(e) => setCartao(e.target.value)} className="h-11" placeholder="600,00" inputMode="decimal" />
               </Field>
               <Field label="Cartão Benefício">
